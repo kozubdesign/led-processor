@@ -42,8 +42,14 @@ st.markdown("""
     [data-testid="stHeader"] { display: none; }
     .main-title { text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }
     
-    /* Одинаковая ширина полей на мобилках */
-    [data-testid="column"] { width: 100% !important; flex: 1 1 0% !important; min-width: 0px !important; }
+    /* Одинаковая ширина колонок и слайдера на мобилках */
+    [data-testid="column"], [data-testid="stSlider"] { 
+        width: 100% !important; 
+        flex: 1 1 0% !important; 
+        min-width: 0px !important; 
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
     
     div.stButton, div.stDownloadButton, div.element-container:has(button) {
         display: flex !important; justify-content: center !important; width: 100% !important;
@@ -59,7 +65,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>Контент для LED-экрана</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
@@ -72,7 +78,7 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Сетка ввода (без серой полоски)
+# Поля ввода
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
@@ -82,6 +88,7 @@ tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
 
+# Слайдер (теперь с CSS-адаптацией под ширину полей)
 default_scale = 50 if tw >= th else 40
 logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
