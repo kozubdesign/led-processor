@@ -53,6 +53,19 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
+    /* Стили для слайдера (Зеленый цвет) */
+    .stSlider [data-baseweb="slider"] > div > div {{
+        background: #28a745 !important;
+    }}
+    .stSlider [data-baseweb="slider"] div[role="slider"] {{
+        background-color: #28a745 !important;
+        border: 2px solid #28a745 !important;
+    }}
+    .stSlider div[data-testid="stThumbValue"] {{
+        color: #28a745 !important;
+        font-weight: bold;
+    }}
+
     /* Убираем подсказки "Press Enter to apply" */
     [data-testid="stInputInstructions"] {{
         display: none !important;
@@ -90,6 +103,7 @@ st.markdown(f"""
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
+        border: none !important;
     }}
     .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
