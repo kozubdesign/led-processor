@@ -4,6 +4,7 @@ import io
 import os
 import base64
 from PIL import Image, ImageOps
+from datetime import datetime
 
 # ====================== ФУНКЦИИ (С КЭШИРОВАНИЕМ) ======================
 @st.cache_resource
@@ -84,7 +85,6 @@ with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, default_sca
 
 # ОТРИСОВКА ПРЕВЬЮ
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
-    # Используем кэшированную версию функции
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
     if preview:
         buf = io.BytesIO()
@@ -102,10 +102,14 @@ btn_placeholder = st.empty()
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
+        # Формируем имя файла: Ширина x Высота_ГГММДД.zip
+        current_date = datetime.now().strftime("%y%m%d")
+        zip_filename = f"{tw}x{th}_{current_date}.zip"
+        
         btn_placeholder.download_button(
             label="📥 Скачать контент",
             data=st.session_state.zip_ready,
-            file_name=f"led_{tw}x{th}.zip",
+            file_name=zip_filename,
             mime="application/zip"
         )
     elif st.session_state.processing:
