@@ -34,6 +34,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# 1. ШАПКА (САМАЯ ПЕРВАЯ СТРОКА ВЫВОДА)
+st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
+
 @st.cache_resource
 def get_cached_logo(path):
     if os.path.exists(path):
@@ -59,48 +62,43 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
             return img
     except: return None
 
-# ====================== ИНТЕРФЕЙС ======================
-
-# 1. ШАПКА (Всегда сверху)
-st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
-
-# 2. МЕСТО ПОД ПРЕВЬЮ И РАЗРЕШЕНИЕ
-preview_area = st.container()
-res_area = st.container()
-
-# Данные
+# Подготовка данных
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# 3. ПОЛЯ ВВОДА + ЛОГО
+# 2. РЕЗЕРВИРУЕМ МЕСТО ПОД ПРЕВЬЮ И РАЗРЕШЕНИЕ (сразу под шапкой)
+preview_placeholder = st.empty()
+res_placeholder = st.empty()
+
+# 3. ПОЛЯ ВВОДА (внизу)
 st.markdown("---")
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
-with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=0, step=10)
-with col_h: h_mm = st.number_input("Высота (мм)", 0, value=0, step=10)
-with col_p: pitch = st.number_input("Шаг (мм)", 0, value=0, step=1)
-with col_s: logo_percent = st.slider("Лого %", 0, 150, 0, 5)
+with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=0, key="w_mm")
+with col_h: h_mm = st.number_input("Высота (мм)", 0, value=0, key="h_mm")
+with col_p: pitch = st.number_input("Шаг (мм)", 0, value=0, key="pitch")
+with col_s: logo_p = st.slider("Лого %", 0, 150, 0)
 
-# Рендеринг контента в зарезервированные области
+# ЛОГИКА ОТОБРАЖЕНИЯ (Заполняем пустые места наверху)
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     
     if logo_img and bg_files:
-        preview = process_single_image(bg_files[0], logo_img, tw, th, logo_percent)
+        preview = process_single_image(bg_files[0], logo_img, tw, th, logo_p)
         if preview:
             buf = io.BytesIO()
             preview.save(buf, format="JPEG", quality=90)
             img_str = base64.b64encode(buf.getvalue()).decode()
             
-            with preview_area:
-                st.markdown(f'''
-                    <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                        <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 350px; border-radius: 4px; border: 1px solid #ddd;">
-                    </div>
-                ''', unsafe_allow_html=True)
+            # Вставляем превью в зарезервированное место №2
+            preview_placeholder.markdown(f'''
+                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                    <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 350px; border-radius: 4px; border: 1px solid #ddd;">
+                </div>
+            ''', unsafe_allow_html=True)
             
-            with res_area:
-                st.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+            # Вставляем разрешение в зарезервированное место №3
+            res_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
 
     # 4. КНОПКА
     st.markdown("<br>", unsafe_allow_html=True)
@@ -108,7 +106,7 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
             for f in bg_files:
-                processed = process_single_image(f, logo_img, tw, th, logo_percent)
+                processed = process_single_image(f, logo_img, tw, th, logo_p)
                 if processed:
                     img_byte_arr = io.BytesIO()
                     processed.save(img_byte_arr, format='JPEG', quality=95)
@@ -117,6 +115,6 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
         st.download_button(
             label="Скачать архив",
             data=zip_buffer.getvalue(),
-            file_name=f"led_{tw}x{th}_{datetime.now().strftime('%H%M')}.zip",
+            file_name=f"led_{tw}x{th}.zip",
             mime="application/zip"
         )
