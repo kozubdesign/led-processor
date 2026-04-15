@@ -6,7 +6,7 @@ import base64
 from PIL import Image, ImageOps
 from datetime import datetime
 
-# ====================== ФУНКЦИИ ======================
+# ====================== ФУНКЦИИ ОБРАБОТКИ ======================
 @st.cache_resource
 def get_cached_logo(path):
     if os.path.exists(path):
@@ -23,10 +23,6 @@ def get_base64_img(path):
         except: return ""
     return ""
 
-@st.cache_data(show_spinner=False)
-def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm):
-    return process_single_image(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm)
-
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_mm, h_mm):
     try:
         active_logo = logo_h if tw >= th else logo_v
@@ -35,20 +31,17 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
             temp_aspect = w_mm / h_mm
             temp_h = 1200
             temp_w = int(temp_h * temp_aspect)
-            
             img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.LANCZOS)
-            
             lw, lh = active_logo.size
             max_scale = min(temp_w / lw, temp_h / lh)
             final_scale = max_scale * (user_scale_percent / 100)
             new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
             logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
             img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
-            
             return img.resize((tw, th), Image.Resampling.LANCZOS)
     except: return None
 
-# ====================== НАСТРОЙКА UI ======================
+# ====================== UI И СТИЛИ ======================
 st.set_page_config(page_title="LEDsi Генератор контента", layout="wide", page_icon="favicon.png")
 
 logo_black_base64 = get_base64_img("logo_black.png")
@@ -58,162 +51,123 @@ st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    [data-testid="stInputInstructions"] {{ display: none !important; }}
     
-    .logo-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }}
-    
-    .logo-img {{ width: 150px; }}
-    
-    /* Анимация вращения */
-    @keyframes spin {{
-        to {{ transform: rotate(360deg); }}
+    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+
+    /* СТИЛЬ КНОПКИ ГЕНЕРАЦИИ (ЗЕЛЕНАЯ) */
+    .stButton > button {{
+        width: 100% !important; height: 54px !important; background-color: #28a745 !important;
+        color: white !important; font-weight: bold !important; border-radius: 8px !important;
     }}
 
-    /* Вариант 1: Классический спиннер (iOS/macOS стиль) через CSS */
+    /* СТИЛЬ КНОПКИ СКАЧИВАНИЯ (СИНЯЯ - ЧТОБЫ ЗАМЕТИТЬ) */
+    .stDownloadButton > button {{
+        width: 100% !important; height: 60px !important; background-color: #007bff !important;
+        color: white !important; font-weight: 800 !important; border-radius: 8px !important;
+        border: 2px solid #0056b3 !important; font-size: 1.2rem !important;
+    }}
+
+    /* iOS СПИННЕР */
     button[disabled] p::before {{
-        content: "";
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        margin-right: 12px;
-        vertical-align: middle;
-        border-radius: 50%;
-        /* Создаем эффект делений через конический градиент и маску */
+        content: ""; display: inline-block; width: 20px; height: 20px;
+        margin-right: 12px; vertical-align: middle; border-radius: 50%;
         background: conic-gradient(from 0deg, transparent 0%, #ffffff 100%);
         mask: radial-gradient(farthest-side, transparent 65%, black 70%);
         -webkit-mask: radial-gradient(farthest-side, transparent 65%, black 70%);
-        animation: spin 1s steps(12) infinite; /* steps(12) создает эффект дискретного вращения как в iOS */
-    }}
-
-    @media (prefers-color-scheme: light) {{
-        .logo-dark {{ display: none; }}
-        .logo-light {{ display: block; }}
-    }}
-    @media (prefers-color-scheme: dark) {{
-        .logo-light {{ display: none; }}
-        .logo-dark {{ display: block; }}
+        animation: spin 1s steps(12) infinite;
     }}
     
-    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{
-        display: flex !important; justify-content: center !important; width: 100% !important;
-    }}
-    .stButton > button, .stDownloadButton > button {{
-        width: 320px !important; height: 54px !important; background-color: #28a745 !important;
-        color: white !important; font-weight: 600 !important; border-radius: 8px !important;
-    }}
     .res-box {{ 
-        width: 100%; box-sizing: border-box;
         text-align: center; background-color: #d4edda; color: #155724; 
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
     }}
     </style>
     
-    <div class="logo-container">
-        <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
-        <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
+    <div style="text-align:center; margin-bottom:20px;">
+        <img src="data:image/png;base64,{logo_h_base64}" style="width:150px;">
+        <h2 style="margin-top:10px;">Генератор контента</h2>
     </div>
-    <div class='main-title'>Генератор контента</div>
     """, unsafe_allow_html=True)
 
-# ====================== ЛОГИКА ======================
+# ====================== ЛОГИКА ПРИЛОЖЕНИЯ ======================
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
-preview_placeholder = st.empty()
-resolution_placeholder = st.empty()
-
+# Загрузка ресурсов
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
+# Ввод параметров
 c1, c2, c3 = st.columns(3)
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-with c3: pitch_str = st.text_input("Шаг (мм)", value="0")
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=8000)
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=6000)
+with c3: pitch_str = st.text_input("Шаг (мм)", value="16/32")
 
-tw, th = 0, 0
-pitch_x, pitch_y = 0.0, 0.0
-is_asymmetric = "/" in pitch_str
-
+# Расчет разрешения
+tw, th, pitch_x, pitch_y = 0, 0, 0.0, 0.0
 try:
-    if is_asymmetric:
+    if "/" in pitch_str:
         parts = pitch_str.split("/")
-        pitch_x = float(parts[0].replace(",", "."))
-        pitch_y = float(parts[1].replace(",", "."))
+        pitch_x, pitch_y = float(parts[0]), float(parts[1])
     else:
-        pitch_x = pitch_y = float(pitch_str.replace(",", "."))
-except:
-    pass
+        pitch_x = pitch_y = float(pitch_str)
+    if pitch_x > 0 and pitch_y > 0:
+        tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
+except: pass
 
-if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
-    tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
+logo_scale = st.slider("Размер лого (%)", 0, 100, 50)
 
-cs = st.columns(1)[0]
-default_scale = 50 if tw >= th else 40
-with cs:
-    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
+# Превью и разрешение
+if tw > 0 and bg_files:
+    st.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+    st.info(f"Найдено изображений в папке: {len(bg_files)}")
 
+st.markdown("---")
+btn_container = st.empty()
+
+# ЛОГИКА КНОПОК
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
-    preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
-    if preview:
-        buf = io.BytesIO()
-        preview.save(buf, format="JPEG", quality=85)
-        img_str = base64.b64encode(buf.getvalue()).decode()
-        preview_placeholder.markdown(f'''
-            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
-            </div>
-        ''', unsafe_allow_html=True)
-        
-        res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
-        resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-btn_placeholder = st.empty()
-
-if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
+    # 1. Если архив готов — показываем БОЛЬШУЮ СИНЮЮ КНОПКУ
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
-elif st.session_state.processing:
-        # Используем пустой текст или просто "Идет генерация...", 
-        # так как спиннер подставится автоматически через CSS
-        btn_placeholder.button("Идет генерация...", disabled=True)
-        
-        # Создаем прогресс-бар под кнопкой
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        st.download_button(
+            label="🚀 СКАЧАТЬ ГОТОВЫЙ АРХИВ", 
+            data=st.session_state.zip_ready, 
+            file_name=zip_filename, 
+            mime="application/zip",
+            key="download_btn"
+        )
+        if st.button("♻️ Создать заново"):
+            st.session_state.zip_ready = None
+            st.rerun()
+
+    # 2. Если в процессе — крутим спиннер и бар
+    elif st.session_state.processing:
+        btn_container.button("Генерация...", disabled=True)
+        bar = st.progress(0)
+        status = st.empty()
         
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            total_files = len(bg_files)
-            
             for i, f in enumerate(bg_files):
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
-                
                 if processed:
-                    img_byte_arr = io.BytesIO()
-                    processed.save(img_byte_arr, format='JPEG', quality=95)
-                    zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-                
-                # Обновляем прогресс
-                current_progress = (i + 1) / total_files
-                progress_bar.progress(current_progress)
-                status_text.markdown(f"<div style='text-align:center;'>Обработано: {i+1} из {total_files}</div>", unsafe_allow_html=True)
+                    img_io = io.BytesIO()
+                    processed.save(img_io, format='JPEG', quality=95)
+                    zip_file.writestr(os.path.basename(f), img_io.getvalue())
+                bar.progress((i + 1) / len(bg_files))
+                status.center(f"Обработка: {i+1} из {len(bg_files)}")
         
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
-        
-        # Очищаем временные элементы перед обновлением
-        progress_bar.empty()
-        status_text.empty()
         st.rerun()
+
+    # 3. Исходное состояние
+    else:
+        if btn_container.button("Сгенерировать контент"):
+            st.session_state.zip_ready = None
+            st.session_state.processing = True
+            st.rerun()
