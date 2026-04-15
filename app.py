@@ -2,6 +2,7 @@ import streamlit as st
 import zipfile
 import io
 import os
+import base64
 from PIL import Image
 from datetime import datetime
 
@@ -21,36 +22,25 @@ else:
 st.markdown("""
     <style>
     .block-container {
-        max-width: 720px !important;
+        max-width: 800px !important; /* Увеличено для превью шириной 800px */
         margin: 0 auto !important;
         padding-top: 2rem !important;
     }
 
-    /* Логотип - уменьшен в 2 раза по высоте (было 68px, стало 34px) */
+    /* Логотип - исправлена обрезка (object-fit) и уменьшен отступ (10px) */
     div[data-testid="stImage"] img {
-        margin: 0 auto 30px auto !important;
+        margin: 0 auto 10px auto !important; 
         height: 34px !important;
         width: auto !important;
+        object-fit: contain !important; 
         display: block !important;
     }
 
     h1 {
         text-align: center !important;
         font-size: 2.25rem !important;
-        margin-bottom: 12px !important;
-    }
-
-    .subtitle {
-        text-align: center !important;
-        color: #666;
-        font-size: 1.05rem;
-        margin-bottom: 40px !important;
-    }
-
-    .params-title {
-        text-align: center !important;
-        font-size: 1.35rem;
-        margin: 30px 0 22px 0;
+        margin-top: 0 !important;
+        margin-bottom: 30px !important; 
     }
 
     /* Поля ввода по центру с фиксированной шириной */
@@ -84,37 +74,22 @@ st.markdown("""
         border-radius: 8px !important;
         margin: 0 auto !important;
     }
-    
-    /* Превью - сохраняем пропорции без искажения */
-    .preview-image {
-        display: flex !important;
-        justify-content: center !important;
-        margin: 35px auto !important;
-        max-width: 100%;
-        height: auto;
-    }
-    
-    .preview-image img {
-        max-width: 100%;
-        height: auto !important;
-        width: auto !important;
-        object-fit: contain;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-# ====================== ЛОГОТИП ======================
+# ====================== ЛОГОТИП И ЗАГОЛОВОК ======================
 is_dark = st.get_option("theme.base") == "dark"
 header_logo = LOGO_PATH if is_dark else LOGO_BLACK_PATH
 
 if os.path.exists(header_logo):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # Убираем параметр width, CSS контролирует размер через height
         st.image(header_logo)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
+
+# ====================== КОНТЕЙНЕР ДЛЯ ПРЕВЬЮ НАД ПОЛЯМИ ======================
+preview_container = st.container()
 
 # ====================== SESSION STATE ======================
 if 'zip_data' not in st.session_state:
@@ -134,7 +109,7 @@ def get_processing_logo():
             return None
     return None
 
-# ====================== ОБРАБОТКА ======================
+# ====================== ОБРАБОТКА ИЗОБРАЖЕНИЯ ======================
 def process_single_image(bg_path, logo_img, tw, th, logo_percent=45):
     try:
         img = Image.open(bg_path).convert("RGB")
@@ -163,7 +138,7 @@ def process_single_image(bg_path, logo_img, tw, th, logo_percent=45):
         logo_res = logo.resize((lw, lh), Image.Resampling.LANCZOS)
         img.paste(logo_res, ((tw - lw)//2, (th - lh)//2), logo_res)
         return img
-    except:
+    except Exception as e:
         return None
 
 # ====================== САЙДБАР ======================
@@ -178,39 +153,41 @@ with st.sidebar:
     
     logo_percent = st.slider("Размер логотипа (%)", 20, 70, 45, 5)
 
-# ====================== ПАРАМЕТРЫ ======================
-st.markdown('<p class="params-title">Параметры экрана</p>', unsafe_allow_html=True)
-
+# ====================== ПАРАМЕТРЫ ЭКРАНА ======================
 w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
-
-# Шаг пикселя - только целые числа, без дробной части
-pitch = st.number_input("Шаг пикселя (мм)", 
-                       min_value=0, 
-                       max_value=999999, 
-                       value=0, 
-                       step=1,
-                       format="%d")
+pitch = st.number_input("Шаг пикселя (мм)", min_value=0, max_value=999999, value=0, step=1, format="%d")
 
 fields_filled = w_mm > 0 and h_mm > 0 and pitch > 0
 
+# ====================== ГЕНЕРАЦИЯ ПРЕВЬЮ В ВЕРХНИЙ КОНТЕЙНЕР ======================
 if fields_filled:
     tw = int(round(w_mm / pitch))
     th = int(round(h_mm / pitch))
-    st.success(f"**Разрешение: {tw} × {th} px**")
-
-# ====================== ПРЕВЬЮ (без искажения) ======================
-if fields_filled:
-    logo_img = get_processing_logo()
-    if logo_img:
-        bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        if bg_files:
-            preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
-            if preview:
-                # Превью масштабируется без искажения, сохраняя пропорции
-                st.markdown('<div class="preview-image">', unsafe_allow_html=True)
-                st.image(preview, use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Отрисовываем контент внутри заранее созданного контейнера
+    with preview_container:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.success(f"**Разрешение: {tw} × {th} px**")
+            
+        logo_img = get_processing_logo()
+        if logo_img:
+            bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            if bg_files:
+                preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
+                if preview:
+                    # Конвертируем превью в Base64 для точного контроля размеров через HTML
+                    buf = io.BytesIO()
+                    preview.save(buf, format="JPEG", quality=85)
+                    img_str = base64.b64encode(buf.getvalue()).decode()
+                    
+                    st.markdown(f'''
+                        <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 30px;">
+                            <img src="data:image/jpeg;base64,{img_str}" 
+                                 style="max-width: 800px; max-height: 400px; width: auto; height: auto; object-fit: contain; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        </div>
+                    ''', unsafe_allow_html=True)
 
 # ====================== КНОПКА ======================
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -233,7 +210,6 @@ with col2:
                         zip_buffer.seek(0)
                         st.session_state.zip_data = zip_buffer.getvalue()
                         
-                        # Формируем имя архива: "Контент на экран 26 04 15"
                         now = datetime.now()
                         year = now.strftime("%y")
                         month = now.strftime("%m")
@@ -241,7 +217,7 @@ with col2:
                         st.session_state.file_name = f"Контент на экран {year} {month} {day}.zip"
                         
                         st.success("✅ Архив создан!")
-                        st.rerun()  # Перезапускаем для отображения кнопки скачивания
+                        st.rerun() 
         else:
             st.warning("Заполните все параметры экрана")
 
