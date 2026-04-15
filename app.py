@@ -34,7 +34,7 @@ def get_base64_img(path):
     return ""
 
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
-    # Защита от некорректных размеров
+    # Защита от деления на ноль и некорректных размеров
     if tw <= 0 or th <= 0:
         return None
     try:
@@ -43,11 +43,10 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
             return None
         
         with Image.open(bg_path) as img:
-            # Приведение фона к нужному разрешению
             img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
-            
             lw, lh = active_logo.size
-            # Расчет масштаба, чтобы лого не вылезало за границы
+            
+            # Расчет масштаба
             max_scale = min(tw / lw, th / lh)
             final_scale = max_scale * (user_scale_percent / 100)
             
@@ -62,13 +61,13 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
             
             img.paste(logo_res, (ox, oy), logo_res)
             return img
-    except Exception as e:
+    except:
         return None
 
 # ====================== НАСТРОЙКА UI ======================
 st.set_page_config(page_title="LED Generator", page_icon="favicon.png", layout="wide")
 
-# Загрузка ресурсов
+# Предварительная загрузка
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
 logo_h_img = get_cached_logo("logo_h.png")
@@ -136,12 +135,12 @@ if tw > 0 and th > 0 and bg_files:
         ''', unsafe_allow_html=True)
         resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
 elif not bg_files:
-    st.info("Добавьте изображения в папку 'images'")
+    st.warning("Папка 'images' пуста или не найдена.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# КНОПКИ УПРАВЛЕНИЯ
-if tw > 0 and th > 0 and (logo_h_img or logo_v_img) and bg_files:
+# КНОПКИ
+if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         st.download_button(
@@ -150,12 +149,12 @@ if tw > 0 and th > 0 and (logo_h_img or logo_v_img) and bg_files:
             file_name=f"{tw}x{th}_{current_date}.zip", 
             mime="application/zip"
         )
-        if st.button("Сбросить и создать новый"):
+        if st.button("Сбросить"):
             st.session_state.zip_ready = None
             st.rerun()
             
     elif st.session_state.processing:
-        with st.spinner("Генерация набора изображений..."):
+        with st.spinner("Генерируем архив..."):
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for f in bg_files:
