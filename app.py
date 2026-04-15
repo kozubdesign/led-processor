@@ -32,7 +32,6 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
         active_logo = logo_h if tw >= th else logo_v
         if not active_logo: return None
         with Image.open(bg_path) as img:
-            # Сначала готовим в правильных пропорциях (мм), чтобы лого не сплющило
             temp_aspect = w_mm / h_mm
             temp_h = 1200
             temp_w = int(temp_h * temp_aspect)
@@ -46,7 +45,6 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
             logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
             img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
             
-            # Финальное сплющивание под пиксели контроллера
             return img.resize((tw, th), Image.Resampling.LANCZOS)
     except: return None
 
@@ -71,6 +69,20 @@ st.markdown(f"""
     
     .logo-img {{ width: 150px; }}
     
+    /* Анимация вращения */
+    @keyframes spin {{
+        from {{ transform: rotate(0deg); }}
+        to {{ transform: rotate(360deg); }}
+    }}
+
+    /* Применяем анимацию к иконке внутри заблокированной кнопки */
+    button[disabled] p::before {{
+        content: "🔄";
+        display: inline-block;
+        margin-right: 10px;
+        animation: spin 2s linear infinite;
+    }}
+
     @media (prefers-color-scheme: light) {{
         .logo-dark {{ display: none; }}
         .logo-light {{ display: block; }}
@@ -81,7 +93,6 @@ st.markdown(f"""
     }}
     
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    .stNumberInput, .stSlider {{ width: 100% !important; }}
     
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
@@ -143,7 +154,6 @@ default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-# Блок превью и текста разрешения
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -162,14 +172,14 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
 st.markdown("<br>", unsafe_allow_html=True)
 btn_placeholder = st.empty()
 
-# Блок кнопок управления
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
         btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
     elif st.session_state.processing:
-        btn_placeholder.button("🔄 Идет генерация... подождите", disabled=True)
+        # Текст внутри кнопки пустой, так как иконка и текст теперь управляются через CSS выше
+        btn_placeholder.button("Идет генерация...", disabled=True)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for f in bg_files:
