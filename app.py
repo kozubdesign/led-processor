@@ -72,14 +72,17 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
-    /* Убираем кнопки +/- из числовых полей */
+    /* УБИРАЕМ КНОПКИ +/- */
+    div[data-testid="stNumberInput"] button {{
+        display: none !important;
+    }}
     input::-webkit-outer-spin-button,
     input::-webkit-inner-spin-button {{
-        -webkit-appearance: none;
-        margin: 0;
+        -webkit-appearance: none !important;
+        margin: 0 !important;
     }}
     input[type=number] {{
-        -moz-appearance: textfield;
+        -moz-appearance: textfield !important;
     }}
 
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
