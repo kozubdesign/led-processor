@@ -185,8 +185,8 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for i, f in enumerate(bg_files):
                     percent = int(((i + 1) / total_files) * 100)
-                    # Используем стабильный ключ для кнопки статуса
-                    action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key="btn_processing_active")
+                    # Используем уникальный ключ для каждого шага отрисовки в цикле
+                    action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"btn_proc_{i}")
                     
                     processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                     if processed:
