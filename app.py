@@ -9,22 +9,34 @@ from datetime import datetime
 LOGO_PATH = "logo.png"
 SOURCE_FOLDER = "images"
 
-# 1. Настройка иконки вкладки браузера
+# 1. Настройка страницы
 if os.path.exists(LOGO_PATH):
     fav_logo = Image.open(LOGO_PATH)
     st.set_page_config(page_title="LED Processor", page_icon=fav_logo, layout="wide")
 else:
     st.set_page_config(page_title="LED Processor", layout="wide")
 
-# 2. Кастомный заголовок с твоим логотипом
-col_title_1, col_title_2, col_title_3 = st.columns([1, 3, 1])
-with col_title_2:
-    if os.path.exists(LOGO_PATH):
-        # Отображаем логотип по центру над заголовком или рядом
-        st.image(LOGO_PATH, width=100) 
-    st.markdown("<h1 style='text-align: center; margin-top: -20px;'>LED Content Processor</h1>", unsafe_allow_html=True)
+# 2. Выровненный заголовок с логотипом
+if os.path.exists(LOGO_PATH):
+    # Используем HTML/CSS для идеального выравнивания по центру высоты
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px;">
+            <img src="data:image/png;base64,{st.image_to_base64 if hasattr(st, 'image_to_base64') else ''}" 
+            width="80" style="vertical-align: middle;"> </div>
+        """, unsafe_allow_html=True
+    )
+    # Альтернативный чистый способ Streamlit для выравнивания
+    col_l, col_r = st.columns([1, 4])
+    with col_l:
+        st.write("") # Отступ сверху для компенсации
+        st.image(LOGO_PATH, width=80)
+    with col_r:
+        st.markdown("<h1 style='margin-left: -100px;'>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
+else:
+    st.markdown("<h1 style='text-align: center;'>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 
-# --- ЛОГИКА ОБРАБОТКИ ОДНОГО КАДРА ---
+# --- ЛОГИКА ОБРАБОТКИ ---
 def process_single_image(bg_path, logo_path, tw, th):
     try:
         if tw <= 0 or th <= 0: return None
@@ -36,7 +48,7 @@ def process_single_image(bg_path, logo_path, tw, th):
         img = img.resize((nw, nh), Image.Resampling.LANCZOS)
         img = img.crop(((nw - tw) / 2, (nh - th) / 2, (nw + tw) / 2, (nh + th) / 2))
 
-        h_limit, w_limit = int(th * 0.45), int(tw * 0.45) # Исправлено определение w_limit
+        h_limit, w_limit = int(th * 0.45), int(tw * 0.45)
         lw_h = int(h_limit * (logo.width / logo.height))
         lh_w = int(w_limit * (logo.height / logo.width))
         lw, lh = (lw_h, h_limit) if lw_h <= w_limit else (w_limit, lh_w)
@@ -63,9 +75,9 @@ with col2:
         st.info(f"Разрешение: **{tw}x{th} px**")
     else:
         tw, th = 0, 0
-        st.warning("Введите параметры больше 0")
+        st.warning("Введите параметры")
 
-    process_btn = st.button("🚀 Создать контент", use_container_width=True)
+    process_btn = st.button("🚀 Создать архив", use_container_width=True)
 
 with col1:
     st.subheader("👀 Предпросмотр")
@@ -76,15 +88,17 @@ with col1:
             if tw > 0 and th > 0:
                 preview = process_single_image(full_path, LOGO_PATH, tw, th)
                 if preview:
-                    st.image(preview, use_container_width=True, caption=f"Визуализация на экране {tw}x{th}")
+                    # Масштаб 1:3 для превью
+                    st.image(preview, width=(tw // 3 if tw // 3 > 200 else 300), 
+                             caption=f"Масштаб 1:3 (Итог: {tw}x{th} px)")
             else:
-                st.info("Ожидание ввода параметров для генерации превью...")
+                st.info("Введите размеры для превью")
     else:
-        st.error("Ошибка: Файлы не найдены. Убедитесь, что logo.png и папка images загружены на GitHub.")
+        st.error("Файлы не найдены")
 
 # --- СБОРКА ZIP ---
 if process_btn and tw > 0 and th > 0:
-    with st.spinner('Подготовка архива...'):
+    with st.spinner('Подготовка...'):
         bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
