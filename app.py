@@ -41,24 +41,40 @@ def process_single_image(bg_path, logo_path, tw, th):
 # --- БЛОК ВЫВОДА ИЗОБРАЖЕНИЯ ---
 preview_container = st.empty()
 
-# --- БЛОК С ПАРАМЕТРАМИ (Увеличен в 1.5 раза относительно прошлого варианта) ---
-# Соотношение [1, 2, 1] делает центральную колонку 50% ширины экрана (вместо 33%)
-col_left, col_mid, col_right = st.columns([1, 2, 1])
+# --- БЛОК С ПАРАМЕТРАМИ ---
+col_left, col_mid, col_right = st.columns([0.5, 2, 0.5])
 
 with col_mid:
     w_mm = st.number_input("Ширина экрана (мм)", value=0, step=10)
     h_mm = st.number_input("Высота экрана (мм)", value=0, step=10)
     pitch = st.number_input("Шаг пикселя (мм)", value=0.0, format="%.2f", step=0.01)
 
-    if w_mm > 0 and h_mm > 0 and pitch > 0:
+    # Проверка: заполнены ли все поля
+    fields_filled = w_mm > 0 and h_mm > 0 and pitch > 0
+
+    if fields_filled:
         tw = int(round(w_mm / pitch))
         th = int(round(h_mm / pitch))
         st.caption(f"Разрешение: {tw}x{th} px")
+        
+        # КРАСИМ КНОПКУ В ЗЕЛЕНЫЙ (только если поля заполнены)
+        st.markdown("""
+            <style>
+            div.stButton > button:first-child {
+                background-color: #28a745 !important;
+                color: white !important;
+                border: none;
+            }
+            div.stButton > button:hover {
+                background-color: #218838 !important;
+                color: white !important;
+            }
+            </style>""", unsafe_allow_html=True)
     else:
         tw, th = 0, 0
 
     st.write("")
-    process_btn = st.button("Скачать контент", use_container_width=True)
+    process_btn = st.button("Скачать архив с контентом", use_container_width=True)
 
 # Наполнение превью
 with preview_container:
@@ -68,11 +84,9 @@ with preview_container:
             if tw > 0 and th > 0:
                 preview = process_single_image(os.path.join(SOURCE_FOLDER, files[0]), LOGO_PATH, tw, th)
                 if preview:
-                    # Ограничиваем превью, чтобы оно не было слишком огромным при широких экранах
-                    st.image(preview, use_container_width=True, 
-                             caption=f"Масштаб 1:3 ({tw}x{th} px)")
+                    st.image(preview, use_container_width=True, caption=f"Предпросмотр ({tw}x{th} px)")
             else:
-                st.info("Введите размеры ниже для генерации превью")
+                st.info("Введите параметры ниже для генерации превью")
 
 # --- СБОРКА ZIP ---
 if process_btn and tw > 0 and th > 0:
@@ -90,7 +104,7 @@ if process_btn and tw > 0 and th > 0:
 
         with col_mid:
             st.download_button(
-                label="✅ СОХРАНИТЬ ZIP",
+                label="✅ СОХРАНИТЬ ZIP-АРХИВ",
                 data=zip_buffer.getvalue(),
                 file_name=f"LED_{tw}x{th}_{datetime.now().strftime('%y%m%d')}.zip",
                 mime="application/zip",
