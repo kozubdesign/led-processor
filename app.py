@@ -22,7 +22,6 @@ st.markdown("""
         padding-top: 2rem !important;
     }
 
-    /* Заголовок уменьшен в 1.5 раза */
     .main-title { 
         text-align: center !important; 
         margin-bottom: 20px !important;
@@ -89,18 +88,22 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
 # ====================== ИНТЕРФЕЙС ======================
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
+# Инициализация данных
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# Ввод данных с дефолтными значениями 0
+# Сначала создаем контейнеры для ввода, чтобы считать значения
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
 with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=0, step=10)
 with col_h: h_mm = st.number_input("Высота (мм)", 0, value=0, step=10)
 with col_p: pitch = st.number_input("Шаг (мм)", 0, value=0, step=1)
 with col_s: logo_percent = st.slider("Лого %", 0, 150, 0, 5)
 
-# Логика обработки и отображения (только если значения больше 0)
+# Создаем пустое место ПОД шапкой, но НАД кнопками, через контейнер
+preview_placeholder = st.container()
+
+# Логика обработки
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     if not logo_img:
         st.error(f"Файл логотипа '{LOGO_PATH}' не найден.")
@@ -109,21 +112,23 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
     else:
         tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
         
-        # Превью
-        preview = process_single_image(bg_files[0], logo_img, tw, th, logo_percent)
-        if preview:
-            buf = io.BytesIO()
-            preview.save(buf, format="JPEG", quality=90)
-            img_str = base64.b64encode(buf.getvalue()).decode()
-            st.markdown(f'''
-                <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-                    <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid #ddd;">
-                </div>
-            ''', unsafe_allow_html=True)
+        # Выводим ПРЕВЬЮ и РАЗРЕШЕНИЕ в контейнер наверху
+        with preview_placeholder:
+            preview = process_single_image(bg_files[0], logo_img, tw, th, logo_percent)
+            if preview:
+                buf = io.BytesIO()
+                preview.save(buf, format="JPEG", quality=90)
+                img_str = base64.b64encode(buf.getvalue()).decode()
+                st.markdown(f'''
+                    <div style="display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px;">
+                        <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid #ddd;">
+                    </div>
+                ''', unsafe_allow_html=True)
+            
+            st.success(f"**Разрешение: {tw} × {th} px**")
         
-        st.success(f"**Разрешение: {tw} × {th} px**")
-        
-        # Кнопка генерации
+        # Кнопка генерации в самом низу
+        st.markdown("---")
         if st.button("Обработать все изображения"):
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
