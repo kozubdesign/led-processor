@@ -119,7 +119,6 @@ st.markdown(f"""
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
-# Сначала создаем контейнеры для превью, чтобы они не прыгали вниз
 preview_container = st.container()
 
 logo_h_img = get_cached_logo("logo_h.png")
@@ -127,6 +126,7 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
+# ИНПУТЫ: Все три в одну строку для стабильности верстки
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip, key="w_mm_in")
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip, key="h_mm_in")
@@ -146,11 +146,13 @@ except: pass
 if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
     tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
 
-cs = st.columns(1)[0]
+# СЛАЙДЕР: Ограничиваем ширину, чтобы не был шире инпутов на мобилках
+cs1, cs2 = st.columns([2, 1])
 default_scale = 50 if tw >= th else 40
-with cs: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="l_scale_sl")
+with cs1:
+    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="l_scale_sl")
 
-# Рендерим превью ВНУТРИ контейнера СРАЗУ, чтобы оно не исчезало при генерации
+# ПРЕВЬЮ: Отрисовка
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -168,37 +170,31 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# БЛОК КНОПОК
+# КНОПКИ
 action_area = st.container()
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     with action_area:
         placeholder = st.empty()
-        
         if st.session_state.zip_ready:
             current_date = datetime.now().strftime("%y_%m_%d")
             zip_filename = f"{tw}x{th}_{current_date}.zip"
             placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary", key="dl_f_btn")
-            
         elif st.session_state.processing:
             zip_buffer = io.BytesIO()
             total_files = len(bg_files)
-            
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for i, f in enumerate(bg_files):
                     percent = int(((i + 1) / total_files) * 100)
                     placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"gen_pr_{i}")
-                    
                     processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                     if processed:
                         img_byte_arr = io.BytesIO()
                         processed.save(img_byte_arr, format='JPEG', quality=95)
                         zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-            
             st.session_state.zip_ready = zip_buffer.getvalue()
             st.session_state.processing = False
             st.rerun()
-            
         else:
             if placeholder.button("Создать контент", type="primary", key="start_btn"):
                 st.session_state.processing = True
