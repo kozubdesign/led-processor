@@ -83,7 +83,7 @@ with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
 # Слайдер от 0 до 100%
-with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 70)
+with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 50)
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
