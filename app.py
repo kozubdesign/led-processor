@@ -72,7 +72,6 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
-    /* УБИРАЕМ КНОПКИ +/- */
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
@@ -86,7 +85,6 @@ st.markdown(f"""
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
     
-    /* СТИЛИ ПРЕВЬЮ */
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
     @media (max-width: 768px) {{
@@ -160,8 +158,9 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
                 <img class="preview-img" src="data:image/jpeg;base64,{img_str}">
             </div>
         ''', unsafe_allow_html=True)
-        res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
-        resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
+        
+        # Убраны подписи "Разрешение экрана / медиафасада"
+        resolution_placeholder.markdown(f"<div class='res-box'>{tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
