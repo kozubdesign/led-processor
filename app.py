@@ -72,7 +72,6 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
-    /* УБИРАЕМ КНОПКИ +/- */
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
@@ -86,11 +85,10 @@ st.markdown(f"""
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
     
-    /* СТИЛИ ПРЕВЬЮ */
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
     @media (max-width: 768px) {{
-        .preview-img {{ max-height: 120px !important; }}
+        .preview-img {{ max-height: 200px !important; }}
     }}
 
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
@@ -105,9 +103,7 @@ st.markdown(f"""
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
-    .stButton > button, .stDownloadButton > button {{ width: 320px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
-    
-    .res-box {{ width: 100%; text-align: center; background-color: #d4edda; color: #155724; padding: 8px; border-radius: 8px; margin: 8px 0; font-weight: 400; font-size: 0.8rem; }}
+    .stButton > button, .stDownloadButton > button {{ width: 420px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
     </style>
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
@@ -120,7 +116,6 @@ if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
 preview_placeholder = st.empty()
-resolution_placeholder = st.empty()
 
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
@@ -156,22 +151,22 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         preview.save(buf, format="JPEG", quality=75)
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
-            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
                 <img class="preview-img" src="data:image/jpeg;base64,{img_str}">
             </div>
         ''', unsafe_allow_html=True)
-        res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
-        resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
+# ====================== БЛОК КНОПОК ======================
 st.markdown("<br>", unsafe_allow_html=True)
-
-# БЛОК КНОПОК
 action_placeholder = st.empty()
+
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
+    res_text = f"{tw}х{th} px"
+    
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        action_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
+        action_placeholder.download_button(label=f"Скачать {res_text}", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     elif st.session_state.processing:
         zip_buffer = io.BytesIO()
         total_files = len(bg_files)
@@ -188,6 +183,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.session_state.processing = False
         st.rerun()
     else:
-        if action_placeholder.button("Создать контент", type="primary"):
+        if action_placeholder.button(f"Создать контент {res_text}", type="primary"):
             st.session_state.processing = True
             st.rerun()
