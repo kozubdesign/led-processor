@@ -16,7 +16,6 @@ def get_cached_logo(path):
 
 @st.cache_data
 def get_image_list(folder):
-    """Кэшируем список файлов, чтобы не сканировать диск каждый раз"""
     if not os.path.exists(folder): return []
     return [os.path.join(folder, f) for f in os.listdir(folder) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
@@ -30,12 +29,10 @@ def get_base64_img(path):
     return ""
 
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
-    """Ядро обработки: вызывается только для нужных файлов"""
     try:
         active_logo = logo_h if tw >= th else logo_v
         if not active_logo: return None
         with Image.open(bg_path) as img:
-            # Быстрое масштабирование под LED-сетку
             img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
             lw, lh = active_logo.size
             max_scale = min(tw / lw, th / lh)
@@ -56,71 +53,97 @@ st.markdown(f"""
     <style>
     .stApp {{ background-color: #f5f7f9; }}
     @media (prefers-color-scheme: dark) {{ .stApp {{ background-color: #0e1117; }} }}
-    .block-container {{ max-width: 800px !important; padding-top: 1rem !important; }}
+    .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    .logo-container {{ display: flex; justify-content: center; margin-bottom: 20px; }}
+    [data-testid="stInputInstructions"] {{ display: none !important; }}
+    .logo-container {{ display: flex; justify-content: center; margin: 20px 0; }}
     .logo-img {{ width: 150px; }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
+    .stNumberInput, .stSlider {{ width: 100% !important; }}
+    div.stButton, div.stDownloadButton {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
+    .stButton > button, .stDownloadButton > button {{
+        width: 320px !important; height: 54px !important; background-color: #28a745 !important;
+        color: white !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important;
+    }}
     .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
-        padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold;
+        padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
+        border: 1px solid #c3e6cb;
     }}
-    div.stButton > button {{ width: 100% !important; height: 54px !important; background-color: #28a745 !important; color: white !important; }}
     </style>
+    
     <div class="logo-container">
-        <img class="logo-img" src="data:image/png;base64,{logo_black_base64}">
+        <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
+        <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
     </div>
     <div class='main-title'>Генератор контента</div>
     """, unsafe_allow_html=True)
 
 # ====================== ЛОГИКА ======================
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
+if 'processing' not in st.session_state: st.session_state.processing = False
+
+preview_placeholder = st.empty()
+resolution_placeholder = st.empty()
 
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = get_image_list("images")
 
-# Ввод данных
+# БЛОК ВВОДА
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-with c3: pitch = st.number_input("Шаг (мм)", 0.0, value=0.0, step=0.1)
+with c3: pitch = st.number_input("Шаг (мм)", 0.0, value=0.0, step=0.1, format="%g")
 
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
 
-logo_scale = st.slider("Размер лого (%)", 0, 100, 50)
+logo_scale = st.slider("Размер лого (%)", 0, 100, 50 if tw >= th else 40)
 
-# ПРЕВЬЮ (обрабатываем только ПЕРВОЕ изображение)
+# ПРЕВЬЮ
 if tw > 0 and bg_files:
-    # Важно: здесь мы не крутим цикл, а берем только bg_files[0]
     preview = process_single_image(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
     if preview:
         buf = io.BytesIO()
-        preview.save(buf, format="JPEG", quality=80)
-        st.image(buf, use_container_width=True)
-        st.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+        preview.save(buf, format="JPEG", quality=85)
+        img_str = base64.b64encode(buf.getvalue()).decode()
+        
+        preview_placeholder.markdown(f'''
+            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
+            </div>
+        ''', unsafe_allow_html=True)
+        resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
 
-# КНОПКА ГЕНЕРАЦИИ (обработка всей пачки)
-if tw > 0 and bg_files:
-    if st.button("Генерировать архив"):
-        with st.spinner("Обработка всех файлов..."):
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                for f in bg_files:
-                    proc = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
-                    if proc:
-                        img_byte_arr = io.BytesIO()
-                        proc.save(img_byte_arr, format='JPEG', quality=95)
-                        zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-            
-            st.session_state.zip_ready = zip_buffer.getvalue()
-            
+st.markdown("<br>", unsafe_allow_html=True)
+btn_placeholder = st.empty()
+
+# КНОПКИ
+if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
-        st.download_button(
-            label="⬇️ СКАЧАТЬ АРХИВ",
-            data=st.session_state.zip_ready,
-            file_name=f"{tw}x{th}_pack.zip",
+        current_date = datetime.now().strftime("%y_%m_%d")
+        btn_placeholder.download_button(
+            label="Скачать", 
+            data=st.session_state.zip_ready, 
+            file_name=f"{tw}x{th}_{current_date}.zip", 
             mime="application/zip"
         )
+    elif st.session_state.processing:
+        btn_placeholder.button("⏳ Генерируем...", disabled=True)
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for f in bg_files:
+                proc = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
+                if proc:
+                    img_byte_arr = io.BytesIO()
+                    proc.save(img_byte_arr, format='JPEG', quality=95)
+                    zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+        st.session_state.zip_ready = zip_buffer.getvalue()
+        st.session_state.processing = False
+        st.rerun()
+    else:
+        if btn_placeholder.button("Генерировать"):
+            st.session_state.processing = True
+            st.rerun()
