@@ -16,9 +16,11 @@ def get_cached_logo(path):
 
 def get_base64_img(path):
     if os.path.exists(path):
-        with open(path, "rb") as f:
-            data = f.read()
-        return base64.b64encode(data).decode()
+        try:
+            with open(path, "rb") as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
+        except: return ""
     return ""
 
 @st.cache_data(show_spinner=False)
@@ -57,23 +59,23 @@ st.markdown(f"""
         margin-bottom: 10px;
     }}
     
-    /* Логика отображения логотипов в зависимости от темы */
-    .logo-img {{ width: 300px; }}
+    /* Размеры логотипа (уменьшены в 2 раза) */
+    .logo-img {{ width: 150px; }}
     
-    /* Светлая тема (лого black) */
+    /* Светлая тема */
     @media (prefers-color-scheme: light) {{
         .logo-dark {{ display: none; }}
         .logo-light {{ display: block; }}
     }}
-    /* Темная тема (лого h) */
+    /* Темная тема */
     @media (prefers-color-scheme: dark) {{
         .logo-light {{ display: none; }}
         .logo-dark {{ display: block; }}
     }}
     
-    /* Адаптация под мобильные устройства */
+    /* Мобильная версия (уменьшено в 2 раза) */
     @media (max-width: 640px) {{
-        .logo-img {{ width: 200px; }}
+        .logo-img {{ width: 100px; }}
     }}
 
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
@@ -100,8 +102,7 @@ st.markdown(f"""
     <div class='main-title'>LED Content Generator</div>
     """, unsafe_allow_html=True)
 
-# ====================== ЛОГИКА ПРИЛОЖЕНИЯ ======================
-
+# ====================== ЛОГИКА ======================
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
