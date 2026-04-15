@@ -174,8 +174,8 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         zip_filename = f"{tw}x{th}_{current_date}.zip"
         st.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     
-    elif st.session_state.processing:
-        # Создаем пустое место для динамической кнопки
+elif st.session_state.processing:
+        # 1. Создаем контейнер для кнопки, чтобы она не прыгала
         button_placeholder = st.empty()
         
         zip_buffer = io.BytesIO()
@@ -183,11 +183,17 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for i, f in enumerate(bg_files):
-                # Считаем процент (от 0 до 100)
+                # 2. Вычисляем процент выполнения
+                # i + 1, так как индекс начинается с 0
                 percent = int(((i + 1) / total_files) * 100)
                 
-                # Обновляем кнопку с новым текстом и иконкой (через CSS)
-                button_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"proc_{i}")
+                # 3. Обновляем кнопку в контейнере
+                # Добавляем уникальный key, чтобы Streamlit не путался
+                button_placeholder.button(
+                    f"Идет генерация... {percent}%", 
+                    disabled=True, 
+                    key=f"btn_progress_{i}"
+                )
                 
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                 if processed:
