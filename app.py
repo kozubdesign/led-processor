@@ -14,7 +14,7 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# ====================== CSS И JS ======================
+# ====================== УЛУЧШЕННЫЙ CSS ДЛЯ ЦЕНТРИРОВАНИЯ ======================
 st.markdown("""
     <style>
     .block-container {
@@ -29,12 +29,7 @@ st.markdown("""
         margin-bottom: 25px !important; 
     }
 
-    /* Базовый стиль полей и анимация обводки */
-    div[data-testid="stNumberInput"] input {
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    /* Превью и разрешение */
+    /* Стилизация блока превью и разрешения */
     .preview-block {
         display: flex;
         flex-direction: column;
@@ -48,29 +43,42 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* Центрирование кнопок */
-    .centered-box {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        margin-top: 20px;
+    /* ГЛОБАЛЬНОЕ ЦЕНТРИРОВАНИЕ КНОПОК */
+    /* Находим контейнер кнопки и заставляем его быть флекс-боксом по центру */
+    div.stButton, div[data-testid="stDownloadButton"] {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin: 20px 0 !important;
     }
 
+    /* Стили самой кнопки */
     .stButton > button, div[data-testid="stDownloadButton"] > button {
         background-color: #28a745 !important;
         color: white !important;
         font-weight: 600 !important;
         height: 48px !important;
-        width: 240px !important;
+        width: 260px !important; /* Немного увеличил для солидности */
         border-radius: 6px !important;
         border: none !important;
-        display: block !important;
-        margin: 0 auto !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        transition: transform 0.1s ease !important;
+    }
+
+    .stButton > button:active {
+        transform: scale(0.98);
+    }
+
+    /* Исправление отступов в колонках для выравнивания */
+    div[data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# JS для принудительной зеленой обводки при вводе
+# JS для зеленой обводки при фокусе/вводе
 components.html("""
     <script>
     const inputs = window.parent.document.querySelectorAll('input[type="number"]');
@@ -83,10 +91,8 @@ components.html("""
             this.style.borderColor = '#28a745';
         });
         input.addEventListener('blur', function() {
-            if (this.value === "") {
-                this.style.borderColor = '';
-                this.style.boxShadow = '';
-            }
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
         });
     });
     </script>
@@ -130,7 +136,7 @@ def process_single_image(bg_path, logo_img, tw, th, logo_percent):
     except: return None
 
 # ====================== ВВОД ДАННЫХ ======================
-# Шаг пикселя (col3) увеличен. Пропорции 2:2:2:3 обеспечивают баланс
+# Распределение: Ширина(2), Высота(2), Шаг пикселя(2), Слайдер(3)
 col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
 
 with col1:
@@ -156,8 +162,7 @@ if fields_filled:
             preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
             if preview:
                 buf = io.BytesIO()
-                # Качество превью 100%
-                preview.save(buf, format="JPEG", quality=100)
+                preview.save(buf, format="JPEG", quality=100) # Качество 100
                 img_str = base64.b64encode(buf.getvalue()).decode()
                 st.markdown(f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 10px;">
@@ -168,9 +173,8 @@ if fields_filled:
         st.success(f"**Разрешение: {tw} × {th} px**")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ====================== ЛОГИКА КНОПОК ======================
-st.markdown('<div class="centered-box">', unsafe_allow_html=True)
-
+# ====================== ЛОГИКА КНОПОК (БЕЗ COLUMNS) ======================
+# Кнопки вынесены из колонок, чтобы CSS-центрирование по всей ширине сработало идеально
 if fields_filled:
     if st.session_state.zip_data is None:
         if st.button("Генерировать контент"):
@@ -184,8 +188,7 @@ if fields_filled:
                             res = process_single_image(os.path.join(SOURCE_FOLDER, fname), logo_img, tw, th, logo_percent)
                             if res:
                                 b = io.BytesIO()
-                                # Качество архива всегда 100%
-                                res.save(b, format="JPEG", quality=100, subsampling=0)
+                                res.save(b, format="JPEG", quality=100, subsampling=0) # Качество 100
                                 zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", b.getvalue())
                     st.session_state.zip_data = zip_buffer.getvalue()
                     st.session_state.file_name = f"LED_{datetime.now().strftime('%y%m%d')}.zip"
@@ -197,5 +200,3 @@ if fields_filled:
             file_name=st.session_state.file_name,
             mime="application/zip"
         )
-
-st.markdown('</div>', unsafe_allow_html=True)
