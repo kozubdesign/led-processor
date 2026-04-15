@@ -184,20 +184,36 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
         btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
-    elif st.session_state.processing:
+elif st.session_state.processing:
+        # Используем пустой текст или просто "Идет генерация...", 
+        # так как спиннер подставится автоматически через CSS
         btn_placeholder.button("Идет генерация...", disabled=True)
+        
+        # Создаем прогресс-бар под кнопкой
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for f in bg_files:
+            total_files = len(bg_files)
+            
+            for i, f in enumerate(bg_files):
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
+                
                 if processed:
                     img_byte_arr = io.BytesIO()
                     processed.save(img_byte_arr, format='JPEG', quality=95)
                     zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+                
+                # Обновляем прогресс
+                current_progress = (i + 1) / total_files
+                progress_bar.progress(current_progress)
+                status_text.markdown(f"<div style='text-align:center;'>Обработано: {i+1} из {total_files}</div>", unsafe_allow_html=True)
+        
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
+        
+        # Очищаем временные элементы перед обновлением
+        progress_bar.empty()
+        status_text.empty()
         st.rerun()
-    else:
-        if btn_placeholder.button("Создать контент"):
-            st.session_state.processing = True
-            st.rerun()
