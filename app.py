@@ -74,17 +74,8 @@ st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    
-    /* Исправление ширины полей ввода для мобильных */
-    div[data-testid="stHorizontalBlock"] div[data-testid="column"] {{
-        min-width: 100px !important;
-    }}
-    .stNumberInput, .stTextInput {{
-        width: 100% !important;
-    }}
-
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
-    .logo-img {{ width: 100px; }}
+    .logo-img {{ width: 150px; }}
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
     button[disabled] p::before {{
@@ -107,7 +98,6 @@ st.markdown(f"""
         width: 320px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important;
     }}
     
-    /* Размер шрифта разрешения */
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
         padding: 10px; border-radius: 8px; margin: 15px 0; 
@@ -132,7 +122,6 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Сетка ввода
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip)
@@ -180,15 +169,12 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     
     elif st.session_state.processing:
+        # Отображаем только неактивную кнопку со спиннером
         st.button("Идет генерация...", disabled=True)
-        prog_bar = st.progress(0)
-        status_txt = st.empty()
         
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for i, f in enumerate(bg_files):
-                status_txt.text(f"Файл {i+1} из {len(bg_files)}")
-                prog_bar.progress((i + 1) / len(bg_files))
+            for f in bg_files:
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                 if processed:
                     img_byte_arr = io.BytesIO()
