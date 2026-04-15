@@ -74,6 +74,17 @@ st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
+    
+    /* Исправление ширины инпутов для мобильных устройств */
+    [data-testid="column"] {{
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }}
+    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{
+        width: 100% !important;
+    }}
+
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
     
@@ -176,15 +187,12 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         action_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     
     elif st.session_state.processing:
-        # Здесь происходит магия обновления
         zip_buffer = io.BytesIO()
         total_files = len(bg_files)
         
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for i, f in enumerate(bg_files):
-                # Считаем процент
                 percent = int(((i + 1) / total_files) * 100)
-                # Обновляем текст кнопки прямо в цикле
                 action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"btn_proc_{i}")
                 
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
