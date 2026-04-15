@@ -166,6 +166,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.rerun()
     else:
         # Текст кнопки оставлен как в исходнике (Создать контент)
-        if btn_placeholder.button("Генераровать"):
+        if btn_placeholder.button("Создать контент"):
             st.session_state.processing = True
             st.rerun()
