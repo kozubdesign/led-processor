@@ -34,7 +34,7 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-st.set_page_config(page_title="LED Processor", layout="wide")
+st.set_page_config(page_title="LED Generator", layout="wide")
 
 st.markdown("""
     <style>
@@ -42,16 +42,8 @@ st.markdown("""
     [data-testid="stHeader"] { display: none; }
     .main-title { text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }
     
-    /* Принудительное выравнивание ширины для всех виджетов */
-    .stNumberInput, .stSlider {
-        width: 100% !important;
-    }
-    
-    /* Убираем лишние отступы у колонок на мобилках */
-    [data-testid="column"] {
-        padding-left: 0rem !important;
-        padding-right: 0rem !important;
-    }
+    .stNumberInput, .stSlider { width: 100% !important; }
+    [data-testid="column"] { padding-left: 0rem !important; padding-right: 0rem !important; }
 
     div.stButton, div.stDownloadButton, div.element-container:has(button) {
         display: flex !important; justify-content: center !important; width: 100% !important;
@@ -67,7 +59,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>LED Content Generator</div>", unsafe_allow_html=True)
 
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
@@ -80,7 +72,7 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Единая сетка для всех контролов
+# Контролы
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
@@ -90,12 +82,12 @@ tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
 
-# Помещаем слайдер в отдельную колонку на всю ширину, чтобы он наследовал поведение сетки
 cs = st.columns(1)[0]
 default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
+# Превью
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
     if preview:
@@ -116,9 +108,14 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        btn_placeholder.download_button(label="📥 Скачать контент", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
+        btn_placeholder.download_button(
+            label="Скачать", 
+            data=st.session_state.zip_ready, 
+            file_name=zip_filename, 
+            mime="application/zip"
+        )
     elif st.session_state.processing:
-        btn_placeholder.button("⏳ Создание...", disabled=True)
+        btn_placeholder.button("⏳ Генерируем...", disabled=True)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for f in bg_files:
@@ -131,6 +128,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.session_state.processing = False
         st.rerun()
     else:
-        if btn_placeholder.button("Создать контент"):
+        if btn_placeholder.button("Генерировать"):
             st.session_state.processing = True
             st.rerun()
