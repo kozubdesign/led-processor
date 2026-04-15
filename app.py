@@ -14,7 +14,7 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# ====================== CSS И JS ДЛЯ ДИНАМИЧЕСКОЙ ОБВОДКИ ======================
+# ====================== CSS И JS ======================
 st.markdown("""
     <style>
     .block-container {
@@ -29,12 +29,12 @@ st.markdown("""
         margin-bottom: 25px !important; 
     }
 
-    /* Базовый стиль полей */
+    /* Базовый стиль полей и анимация обводки */
     div[data-testid="stNumberInput"] input {
-        transition: border-color 0.3s ease;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
-    /* Блок превью и разрешения */
+    /* Превью и разрешение */
     .preview-block {
         display: flex;
         flex-direction: column;
@@ -48,10 +48,11 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* Кнопки по центру */
+    /* Центрирование кнопок */
     .centered-box {
         display: flex;
         justify-content: center;
+        width: 100%;
         margin-top: 20px;
     }
 
@@ -59,31 +60,30 @@ st.markdown("""
         background-color: #28a745 !important;
         color: white !important;
         font-weight: 600 !important;
-        height: 45px !important;
-        width: 220px !important;
+        height: 48px !important;
+        width: 240px !important;
         border-radius: 6px !important;
         border: none !important;
+        display: block !important;
         margin: 0 auto !important;
-        display: block;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# Инъекция JS для смены цвета обводки при вводе
+# JS для принудительной зеленой обводки при вводе
 components.html("""
     <script>
     const inputs = window.parent.document.querySelectorAll('input[type="number"]');
     inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.style.borderColor = '#28a745';
+            this.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,0.25)';
+        });
         input.addEventListener('input', function() {
-            const val = this.value;
-            // Проверка: содержит ли ввод что-то кроме цифр и точки
-            if (/[a-zA-Zа-яА-Я]/.test(val)) {
-                this.style.borderColor = 'red';
-                this.style.boxShadow = '0 0 0 0.2rem rgba(255,0,0,0.25)';
-            } else if (val !== "") {
-                this.style.borderColor = '#28a745';
-                this.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,0.25)';
-            } else {
+            this.style.borderColor = '#28a745';
+        });
+        input.addEventListener('blur', function() {
+            if (this.value === "") {
                 this.style.borderColor = '';
                 this.style.boxShadow = '';
             }
@@ -130,8 +130,8 @@ def process_single_image(bg_path, logo_img, tw, th, logo_percent):
     except: return None
 
 # ====================== ВВОД ДАННЫХ ======================
-# Используем веса колонок: 3, 3, 1 (в 3 раза меньше), 3
-col1, col2, col3, col4 = st.columns([3, 3, 1, 3])
+# Шаг пикселя (col3) увеличен. Пропорции 2:2:2:3 обеспечивают баланс
+col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
 
 with col1:
     w_mm = st.number_input("Ширина (мм)", min_value=0, value=0, step=10)
@@ -156,7 +156,8 @@ if fields_filled:
             preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
             if preview:
                 buf = io.BytesIO()
-                preview.save(buf, format="JPEG", quality=80)
+                # Качество превью 100%
+                preview.save(buf, format="JPEG", quality=100)
                 img_str = base64.b64encode(buf.getvalue()).decode()
                 st.markdown(f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 10px;">
@@ -172,25 +173,26 @@ st.markdown('<div class="centered-box">', unsafe_allow_html=True)
 
 if fields_filled:
     if st.session_state.zip_data is None:
-        if st.button("🚀 Генерировать контент"):
+        if st.button("Генерировать контент"):
             logo_img = get_processing_logo()
             bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
             if logo_img and bg_files:
-                with st.spinner("Создаем файлы..."):
+                with st.spinner("Генерация файлов..."):
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                         for i, fname in enumerate(bg_files):
                             res = process_single_image(os.path.join(SOURCE_FOLDER, fname), logo_img, tw, th, logo_percent)
                             if res:
                                 b = io.BytesIO()
-                                res.save(b, format="JPEG", quality=95, optimize=True)
+                                # Качество архива всегда 100%
+                                res.save(b, format="JPEG", quality=100, subsampling=0)
                                 zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", b.getvalue())
                     st.session_state.zip_data = zip_buffer.getvalue()
                     st.session_state.file_name = f"LED_{datetime.now().strftime('%y%m%d')}.zip"
                     st.rerun()
     else:
         st.download_button(
-            label="💾 Скачать архив",
+            label="Скачать архив",
             data=st.session_state.zip_data,
             file_name=st.session_state.file_name,
             mime="application/zip"
