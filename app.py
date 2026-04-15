@@ -53,30 +53,31 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* ФИКС СЛАЙДЕРА: ЗЕЛЕНЫЙ СЛЕВА, СЕРЫЙ СПРАВА */
+    /* ИДЕАЛЬНЫЙ СЛАЙДЕР: ЗЕЛЕНЫЙ СЛЕВА, СЕРЫЙ СПРАВА */
     
-    /* Общий фон полоски (справа от ползунка) */
+    /* 1. Фон всей полоски (справа от ползунка) */
     .stSlider [data-baseweb="slider"] > div {{
         background: #eeeeee !important;
     }}
 
-    /* Активная часть (слева от ползунка) */
+    /* 2. Активная часть (слева до ползунка) */
     .stSlider [data-baseweb="slider"] > div > div > div {{
         background: #28a745 !important;
     }}
 
-    /* Убираем красную точку в самом начале */
+    /* 3. Убираем красную точку в самом начале (заменяем на зеленую) */
     .stSlider [data-baseweb="slider"] > div::before {{
         background-color: #28a745 !important;
     }}
 
-    /* Сам ползунок (кружок) */
+    /* 4. Сам ползунок (кружок) */
     .stSlider [data-baseweb="slider"] div[role="slider"] {{
         background-color: #28a745 !important;
         border: none !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }}
 
-    /* Число над ползунком */
+    /* 5. Числовое значение над ползунком */
     .stSlider div[data-testid="stThumbValue"] {{
         color: #28a745 !important;
     }}
@@ -170,3 +171,13 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             for f in bg_files:
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
                 if processed:
+                    img_byte_arr = io.BytesIO()
+                    processed.save(img_byte_arr, format='JPEG', quality=95)
+                    zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+        st.session_state.zip_ready = zip_buffer.getvalue()
+        st.session_state.processing = False
+        st.rerun()
+    else:
+        if btn_placeholder.button("Генерировать"):
+            st.session_state.processing = True
+            st.rerun()
