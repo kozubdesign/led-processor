@@ -141,8 +141,15 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
     tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
 
 with c4:
-    default_scale = 50 if tw >= th else 40
-    logo_scale = st.slider("Лого %", 0, 100, default_scale, on_change=reset_zip)
+    # ИСПРАВЛЕННАЯ ЛОГИКА:
+    # Если ширина (tw) больше или равна высоте (th) — это горизонтальный экран (35%)
+    # Если высота больше — это вертикальный экран (50%)
+    if tw >= th:
+        default_scale = 35
+    else:
+        default_scale = 50
+    
+    logo_scale = st.slider("Лого %", 0, 100, default_scale, key="logo_slider", on_change=reset_zip)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
