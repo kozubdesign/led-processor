@@ -6,100 +6,111 @@ from PIL import Image
 from datetime import datetime
 
 # ====================== КОНСТАНТЫ ======================
-LOGO_PATH = "logo.png"           # для тёмной темы
-LOGO_BLACK_PATH = "logo_black.png"  # для светлой темы
+LOGO_PATH = "logo.png"              # тёмная тема
+LOGO_BLACK_PATH = "logo_black.png"  # светлая тема
 FAVICON_PATH = "favicon.png"
 SOURCE_FOLDER = "images"
 
-# ====================== НАСТРОЙКА СТРАНИЦЫ ======================
+# ====================== НАСТРОЙКА ======================
 if os.path.exists(FAVICON_PATH):
     st.set_page_config(page_title="LED Processor", page_icon=FAVICON_PATH, layout="centered")
 else:
     st.set_page_config(page_title="LED Processor", layout="centered")
 
-# ====================== CSS ======================
+# ====================== CSS — СТРОГАЯ ЦЕНТРОВКА ======================
 st.markdown("""
     <style>
     .block-container {
         max-width: 760px !important;
         margin: 0 auto !important;
-        padding-top: 1.5rem !important;
+        padding-top: 2rem !important;
     }
 
+    /* Шапка */
+    .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 30px;
+    }
     .header-logo {
-        display: block;
-        margin: 15px auto 20px auto;
-        height: 65px;
+        height: 58px;
         object-fit: contain;
+    }
+    .header-text {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
     }
 
     h1 {
         text-align: center !important;
-        font-size: 2.2rem !important;
-        margin-bottom: 10px !important;
+        font-size: 2.15rem !important;
+        margin: 10px 0 12px 0 !important;
     }
 
     .subtitle {
         text-align: center !important;
-        color: #666;
+        color: #555;
         font-size: 1.05rem;
-        margin-bottom: 30px !important;
+        margin-bottom: 35px !important;
     }
 
     .params-title {
         text-align: center !important;
-        font-size: 1.4rem;
-        margin: 25px 0 15px 0;
+        font-size: 1.35rem;
+        margin: 25px 0 18px 0;
     }
 
+    /* Все поля строго по центру */
     div[data-testid="stNumberInput"] {
-        margin: 0 auto 12px auto !important;
+        margin: 0 auto 14px auto !important;
         max-width: 340px !important;
     }
 
+    /* Узкое поле шага пикселя */
     .step-input {
-        max-width: 215px !important;
-        margin: 0 auto 25px auto !important;
+        max-width: 220px !important;
+        margin: 0 auto 30px auto !important;
     }
 
+    /* Зелёная кнопка по центру */
     .stButton {
         display: flex !important;
         justify-content: center !important;
-        margin-top: 15px !important;
+        margin-top: 10px !important;
     }
     .stButton > button {
         background-color: #28a745 !important;
         color: white !important;
         font-weight: 600 !important;
         font-size: 1.12rem !important;
-        height: 52px !important;
-        min-width: 310px !important;
-        padding: 0 45px !important;
+        height: 54px !important;
+        min-width: 320px !important;
+        padding: 0 50px !important;
         border-radius: 8px !important;
     }
 
     [data-testid="stImage"] {
         display: flex !important;
         justify-content: center !important;
-        margin: 30px auto !important;
+        margin: 35px auto !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# ====================== ВЫБОР ЛОГОТИПА ДЛЯ ШАПКИ ======================
-# logo.png — для тёмной темы
-# logo_black.png — для светлой темы
-is_dark_theme = st.get_option("theme.base") == "dark"
+# ====================== ШАПКА ======================
+is_dark = st.get_option("theme.base") == "dark"
 
-if is_dark_theme and os.path.exists(LOGO_PATH):
-    header_logo = LOGO_PATH
-elif os.path.exists(LOGO_BLACK_PATH):
-    header_logo = LOGO_BLACK_PATH
-else:
-    header_logo = LOGO_PATH  # fallback
+header_logo = LOGO_PATH if is_dark and os.path.exists(LOGO_PATH) else LOGO_BLACK_PATH
 
+st.markdown('<div class="header-container">', unsafe_allow_html=True)
 if os.path.exists(header_logo):
-    st.image(header_logo, use_container_width=False, width=190)
+    st.image(header_logo, use_container_width=False, width=62)
+st.markdown('<h2 class="header-text">LEDsi</h2>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
@@ -112,7 +123,6 @@ if 'zip_data' not in st.session_state:
 if 'uploaded_logo' not in st.session_state:
     st.session_state.uploaded_logo = None
 
-# ====================== ЛОГО ДЛЯ НАЛОЖЕНИЯ НА ИЗОБРАЖЕНИЯ ======================
 def get_processing_logo():
     if st.session_state.uploaded_logo is not None:
         return Image.open(st.session_state.uploaded_logo).convert("RGBA")
@@ -123,7 +133,7 @@ def get_processing_logo():
             return None
     return None
 
-# ====================== ОБРАБОТКА ИЗОБРАЖЕНИЯ ======================
+# ====================== ОБРАБОТКА ======================
 def process_single_image(bg_path, logo_img, tw, th, logo_percent=45):
     try:
         img = Image.open(bg_path).convert("RGB")
@@ -152,18 +162,13 @@ def process_single_image(bg_path, logo_img, tw, th, logo_percent=45):
         logo_res = logo.resize((lw, lh), Image.Resampling.LANCZOS)
         img.paste(logo_res, ((tw - lw)//2, (th - lh)//2), logo_res)
         return img
-    except Exception as e:
-        st.error(f"Ошибка обработки: {e}")
+    except:
         return None
 
 # ====================== САЙДБАР ======================
 with st.sidebar:
     st.header("Настройки")
-    
-    st.session_state.uploaded_logo = st.file_uploader(
-        "Загрузить другой логотип", 
-        type=['png', 'jpg', 'jpeg']
-    )
+    st.session_state.uploaded_logo = st.file_uploader("Загрузить другой логотип", type=['png', 'jpg', 'jpeg'])
     
     if st.session_state.uploaded_logo:
         st.success("✓ Логотип загружен")
@@ -175,10 +180,10 @@ with st.sidebar:
 # ====================== ПАРАМЕТРЫ ======================
 st.markdown('<p class="params-title">Параметры экрана</p>', unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
-with col1:
+c1, c2 = st.columns(2)
+with c1:
     w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
-with col2:
+with c2:
     h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 
 pitch = st.number_input(
@@ -213,7 +218,7 @@ if st.button("🚀 Создать архив с контентом", type="prima
     if fields_filled:
         logo_img = get_processing_logo()
         if logo_img:
-            with st.spinner("Создаём архив..."):
+            with st.spinner("Обработка изображений..."):
                 bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 if bg_files:
                     zip_buffer = io.BytesIO()
@@ -224,13 +229,12 @@ if st.button("🚀 Создать архив с контентом", type="prima
                                 buf = io.BytesIO()
                                 res.save(buf, format="JPEG", quality=95, optimize=True)
                                 zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", buf.getvalue())
-                    
                     zip_buffer.seek(0)
                     st.session_state.zip_data = zip_buffer.getvalue()
                     st.session_state.file_name = f"LED_{tw}x{th}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
-                    st.success("✅ Архив готов!")
+                    st.success("✅ Архив успешно создан!")
     else:
-        st.warning("Заполните все параметры экрана")
+        st.warning("Пожалуйста, заполните все параметры экрана")
 
 # ====================== СКАЧИВАНИЕ ======================
 if st.session_state.zip_data is not None:
