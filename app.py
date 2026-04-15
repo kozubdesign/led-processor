@@ -124,14 +124,14 @@ bg_files = [os.path.join("images", f) for f in os.listdir("images")
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-# Заменили number_input на text_input для поддержки дробей типа 16/32
 with c3: pitch_str = st.text_input("Шаг (мм)", value="0")
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
+is_asymmetric = "/" in pitch_str
 
 try:
-    if "/" in pitch_str:
+    if is_asymmetric:
         parts = pitch_str.split("/")
         pitch_x = float(parts[0].replace(",", "."))
         pitch_y = float(parts[1].replace(",", "."))
@@ -160,7 +160,10 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
                 <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
         ''', unsafe_allow_html=True)
-        resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+        
+        # Динамический заголовок разрешения
+        res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
+        resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 btn_placeholder = st.empty()
