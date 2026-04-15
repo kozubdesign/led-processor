@@ -165,6 +165,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.session_state.processing = False
         st.rerun()
     else:
-        if btn_placeholder.button("Генераровать"):
+        if btn_placeholder.button("Генерировать"):
             st.session_state.processing = True
             st.rerun()
