@@ -5,21 +5,18 @@ import os
 import base64
 from PIL import Image, ImageOps
 
-# ====================== ФУНКЦИИ ======================
-def find_file_case_insensitive(filename):
-    if os.path.exists(filename): return filename
-    current_dir = os.listdir('.')
-    for f in current_dir:
-        if f.lower() == filename.lower(): return f
-    return None
-
+# ====================== ФУНКЦИИ (С КЭШИРОВАНИЕМ) ======================
 @st.cache_resource
 def get_cached_logo(path):
-    found_path = find_file_case_insensitive(path)
-    if found_path:
-        try: return Image.open(found_path).convert("RGBA")
+    if os.path.exists(path):
+        try: return Image.open(path).convert("RGBA")
         except: return None
     return None
+
+@st.cache_data(show_spinner=False)
+def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent):
+    """Кэшируем результат обработки для превью, чтобы оно не моргало"""
+    return process_single_image(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent)
 
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     try:
@@ -36,7 +33,7 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
             return img
     except: return None
 
-# ====================== НАСТРОЙКА ======================
+# ====================== НАСТРОЙКА UI ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
 st.markdown("""
@@ -60,7 +57,7 @@ st.markdown("""
 
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
-# Инициализация состояния
+# Состояние сессии
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
@@ -85,48 +82,35 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
 default_scale = 50 if tw >= th else 40
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-# Сброс архива при изменении параметров
-def reset_zip(): 
-    st.session_state.zip_ready = None
-    st.session_state.processing = False
-
-# Если параметры изменились — сбрасываем готовность скачивания
-if tw > 0:
-    is_hor = tw >= th
-    current_logo = logo_h_img if is_hor else logo_v_img
-    
-    if current_logo and bg_files:
-        preview = process_single_image(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
-        if preview:
-            buf = io.BytesIO()
-            preview.save(buf, format="JPEG", quality=85)
-            img_str = base64.b64encode(buf.getvalue()).decode()
-            preview_placeholder.markdown(f'''
-                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                    <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
-                </div>
-            ''', unsafe_allow_html=True)
-            resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+# ОТРИСОВКА ПРЕВЬЮ
+if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
+    # Используем кэшированную версию функции
+    preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
+    if preview:
+        buf = io.BytesIO()
+        preview.save(buf, format="JPEG", quality=85)
+        img_str = base64.b64encode(buf.getvalue()).decode()
+        preview_placeholder.markdown(f'''
+            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
+            </div>
+        ''', unsafe_allow_html=True)
+        resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 btn_placeholder = st.empty()
 
-if tw > 0 and current_logo and bg_files:
-    # ЛОГИКА КНОПКИ:
+if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
-        # Этап 3: Показываем кнопку скачивания
         btn_placeholder.download_button(
             label="📥 Скачать контент",
             data=st.session_state.zip_ready,
             file_name=f"led_{tw}x{th}.zip",
-            mime="application/zip",
-            on_click=reset_zip # Сброс после скачивания
+            mime="application/zip"
         )
     elif st.session_state.processing:
-        # Этап 2: Текст во время работы
         btn_placeholder.button("⏳ Создание...", disabled=True)
         
-        # Сама работа
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for f in bg_files:
@@ -140,7 +124,6 @@ if tw > 0 and current_logo and bg_files:
         st.session_state.processing = False
         st.rerun()
     else:
-        # Этап 1: Обычная кнопка
         if btn_placeholder.button("Создать контент"):
             st.session_state.processing = True
             st.rerun()
