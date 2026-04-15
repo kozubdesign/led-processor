@@ -79,30 +79,25 @@ st.markdown(f"""
     
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
-    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
-        content: ""; 
-        display: inline-block; 
-        width: 18px; 
-        height: 18px; 
-        margin-right: 10px;
-        vertical-align: middle; 
-        border-radius: 50%;
-        border: 2px solid rgba(0,0,0,0.1);
-        border-top-color: #28a745;
-        animation: spin 0.8s linear infinite;
-    }}
-    
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
-    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important;
     }}
+
+    /* ПРИНУДИТЕЛЬНОЕ ВЫРАВНИВАНИЕ ШИРИНЫ ДЛЯ МОБИЛОК */
+    div[data-testid="column"] {{
+        min-width: 100% !important;
+    }}
     
+    div[data-testid="stSlider"], div[data-testid="stTextInput"], div[data-testid="stNumberInput"] {{
+        max-width: 320px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }}
+
+    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
         padding: 10px; border-radius: 8px; margin: 15px 0; 
@@ -126,7 +121,6 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# ИНПУТЫ: Все три в одну строку для стабильности верстки
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip, key="w_mm_in")
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip, key="h_mm_in")
@@ -146,13 +140,9 @@ except: pass
 if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
     tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
 
-# СЛАЙДЕР: Ограничиваем ширину, чтобы не был шире инпутов на мобилках
-cs1, cs2 = st.columns([2, 1])
 default_scale = 50 if tw >= th else 40
-with cs1:
-    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="l_scale_sl")
+logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="l_scale_sl")
 
-# ПРЕВЬЮ: Отрисовка
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -169,8 +159,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             st.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
-
-# КНОПКИ
 action_area = st.container()
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
