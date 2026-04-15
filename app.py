@@ -101,7 +101,7 @@ st.markdown(f"""
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
     </div>
-    <div class='main-title'>LED Content Generator</div>
+    <div class='main-title'>Генератор контента</div>
     """, unsafe_allow_html=True)
 
 # ====================== ЛОГИКА ======================
