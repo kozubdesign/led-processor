@@ -24,41 +24,29 @@ def get_base64_img(path):
     return ""
 
 def reset_zip():
-    """Сбрасывает состояние архива при изменении параметров"""
     st.session_state.zip_ready = None
 
 @st.cache_data(show_spinner=False)
 def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm):
-    """Оптимизированная функция только для превью"""
     try:
         active_logo = _logo_h if tw >= th else _logo_v
         if not active_logo: return None
-        
         with Image.open(bg_path) as img:
-            # Ускоряем: читаем только нужную часть данных для превью (высота 1200 для расчетов достаточно)
             img.draft("RGB", (tw, th)) 
-            
             temp_aspect = w_mm / h_mm
-            temp_h = 1000 # Для превью чуть снизим планку для скорости
+            temp_h = 1000 
             temp_w = int(temp_h * temp_aspect)
-            
-            # Используем быстрый ресайз для превью
             img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.BILINEAR)
-            
             lw, lh = active_logo.size
             max_scale = min(temp_w / lw, temp_h / lh)
             final_scale = max_scale * (user_scale_percent / 100)
             new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
-            
             logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.BILINEAR)
             img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
-            
-            # Возвращаем результат в нужном разрешении
             return img.resize((tw, th), Image.Resampling.BILINEAR)
     except: return None
 
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_mm, h_mm):
-    """Полноценная обработка для финального ZIP (максимальное качество)"""
     try:
         active_logo = logo_h if tw >= th else logo_v
         if not active_logo: return None
@@ -66,16 +54,13 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
             temp_aspect = w_mm / h_mm
             temp_h = 1200
             temp_w = int(temp_h * temp_aspect)
-            
             img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.LANCZOS)
-            
             lw, lh = active_logo.size
             max_scale = min(temp_w / lw, temp_h / lh)
             final_scale = max_scale * (user_scale_percent / 100)
             new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
             logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
             img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
-            
             return img.resize((tw, th), Image.Resampling.LANCZOS)
     except: return None
 
@@ -89,46 +74,20 @@ st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    [data-testid="stInputInstructions"] {{ display: none !important; }}
-    
-    .logo-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }}
-    
+    .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
-    
-    @keyframes spin {{
-        to {{ transform: rotate(360deg); }}
-    }}
-
+    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     button[disabled] p::before {{
-        content: "";
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        margin-right: 12px;
-        vertical-align: middle;
-        border-radius: 50%;
+        content: ""; display: inline-block; width: 20px; height: 20px; margin-right: 12px;
+        vertical-align: middle; border-radius: 50%;
         background: conic-gradient(from 0deg, transparent 0%, #ffffff 100%);
         mask: radial-gradient(farthest-side, transparent 65%, black 70%);
         -webkit-mask: radial-gradient(farthest-side, transparent 65%, black 70%);
         animation: spin 1s steps(12) infinite;
     }}
-
-    @media (prefers-color-scheme: light) {{
-        .logo-dark {{ display: none; }}
-        .logo-light {{ display: block; }}
-    }}
-    @media (prefers-color-scheme: dark) {{
-        .logo-light {{ display: none; }}
-        .logo-dark {{ display: block; }}
-    }}
-    
+    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
+    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
@@ -137,12 +96,10 @@ st.markdown(f"""
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
     }}
     .res-box {{ 
-        width: 100%; box-sizing: border-box;
-        text-align: center; background-color: #d4edda; color: #155724; 
+        width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
     }}
     </style>
-    
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
@@ -150,7 +107,6 @@ st.markdown(f"""
     <div class='main-title'>Генератор контента</div>
     """, unsafe_allow_html=True)
 
-# ====================== ЛОГИКА ======================
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
@@ -170,76 +126,65 @@ with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_z
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
 is_asymmetric = "/" in pitch_str
-
 try:
     if is_asymmetric:
         parts = pitch_str.split("/")
-        pitch_x = float(parts[0].replace(",", "."))
-        pitch_y = float(parts[1].replace(",", "."))
+        pitch_x, pitch_y = float(parts[0].replace(",", ".")), float(parts[1].replace(",", "."))
     else:
         pitch_x = pitch_y = float(pitch_str.replace(",", "."))
-except:
-    pass
+except: pass
 
 if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
     tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
 
 cs = st.columns(1)[0]
 default_scale = 50 if tw >= th else 40
-with cs:
-    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip)
+with cs: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip)
 
-# ОТОБРАЖЕНИЕ ПРЕВЬЮ
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
         buf = io.BytesIO()
-        preview.save(buf, format="JPEG", quality=75) # Чуть ниже качество для скорости отдачи
+        preview.save(buf, format="JPEG", quality=75)
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 10px;">
                 <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
         ''', unsafe_allow_html=True)
-        
         res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
         resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
-btn_placeholder = st.empty()
 
-# ГЕНЕРАЦИЯ ZIP
+# БЛОК КНОПОК
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
-elif st.session_state.processing:
-        btn_placeholder.button("Идет генерация...", disabled=True)
-        
-        # Создаем прогресс-бар
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        st.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
+    
+    elif st.session_state.processing:
+        st.button("Идет генерация...", disabled=True)
+        prog_bar = st.progress(0)
+        status_txt = st.empty()
         
         zip_buffer = io.BytesIO()
-        num_files = len(bg_files)
-        
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for idx, f in enumerate(bg_files):
-                # Обновляем прогресс
-                percent = (idx + 1) / num_files
-                progress_bar.progress(percent)
-                status_text.text(f"Обработка: {os.path.basename(f)} ({idx+1}/{num_files})")
-                
+            for i, f in enumerate(bg_files):
+                status_txt.text(f"Файл {i+1} из {len(bg_files)}")
+                prog_bar.progress((i + 1) / len(bg_files))
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                 if processed:
                     img_byte_arr = io.BytesIO()
                     processed.save(img_byte_arr, format='JPEG', quality=95)
                     zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
         
-        status_text.empty()
-        progress_bar.empty()
-        
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
+    
+    else:
+        if st.button("Создать контент"):
+            st.session_state.processing = True
+            st.rerun()
