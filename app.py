@@ -24,14 +24,41 @@ def get_base64_img(path):
     return ""
 
 def reset_zip():
-    """Сбрасывает состояние готового архива при изменении параметров"""
+    """Сбрасывает состояние архива при изменении параметров"""
     st.session_state.zip_ready = None
 
 @st.cache_data(show_spinner=False)
 def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm):
-    return process_single_image(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm)
+    """Оптимизированная функция только для превью"""
+    try:
+        active_logo = _logo_h if tw >= th else _logo_v
+        if not active_logo: return None
+        
+        with Image.open(bg_path) as img:
+            # Ускоряем: читаем только нужную часть данных для превью (высота 1200 для расчетов достаточно)
+            img.draft("RGB", (tw, th)) 
+            
+            temp_aspect = w_mm / h_mm
+            temp_h = 1000 # Для превью чуть снизим планку для скорости
+            temp_w = int(temp_h * temp_aspect)
+            
+            # Используем быстрый ресайз для превью
+            img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.BILINEAR)
+            
+            lw, lh = active_logo.size
+            max_scale = min(temp_w / lw, temp_h / lh)
+            final_scale = max_scale * (user_scale_percent / 100)
+            new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
+            
+            logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.BILINEAR)
+            img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
+            
+            # Возвращаем результат в нужном разрешении
+            return img.resize((tw, th), Image.Resampling.BILINEAR)
+    except: return None
 
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_mm, h_mm):
+    """Полноценная обработка для финального ZIP (максимальное качество)"""
     try:
         active_logo = logo_h if tw >= th else logo_v
         if not active_logo: return None
@@ -162,11 +189,12 @@ default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip)
 
+# ОТОБРАЖЕНИЕ ПРЕВЬЮ
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
         buf = io.BytesIO()
-        preview.save(buf, format="JPEG", quality=85)
+        preview.save(buf, format="JPEG", quality=75) # Чуть ниже качество для скорости отдачи
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 10px;">
@@ -180,6 +208,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
 st.markdown("<br>", unsafe_allow_html=True)
 btn_placeholder = st.empty()
 
+# ГЕНЕРАЦИЯ ZIP
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
@@ -190,6 +219,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for f in bg_files:
+                # Для ZIP используем медленный, но качественный LANCZOS
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                 if processed:
                     img_byte_arr = io.BytesIO()
