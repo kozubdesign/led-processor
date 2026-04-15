@@ -53,41 +53,39 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* Убираем подсказки "Press Enter to apply" */
-    [data-testid="stInputInstructions"] {{
-        display: none !important;
-    }}
+    /* НАСТРОЙКА ЦВЕТОВ СЛАЙДЕРА */
     
-    /* Стили для зеленого слайдера */
-    div[data-testid="stSlider"] {{
-        accent-color: #28a745 !important;
+    /* 1. Фон всей полоски (справа от ползунка - серый) */
+    .stSlider [data-baseweb="slider"] > div {{
+        background: #eeeeee !important;
+        border-radius: 4px;
     }}
-    
-    div[data-testid="stSlider"] div[data-baseweb="slider"] {{
+
+    /* 2. Активная часть (слева до ползунка - зеленый) */
+    .stSlider [data-baseweb="slider"] > div > div > div {{
         background-color: #28a745 !important;
     }}
-    
-    div[data-testid="stSlider"] div[data-baseweb="slider"] div:first-child {{
+
+    /* 3. Сам ползунок (кружок) */
+    .stSlider [data-baseweb="slider"] div[role="slider"] {{
         background-color: #28a745 !important;
+        border: none !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }}
-    
-    div[data-testid="stSlider"] div[role="slider"] {{
-        background-color: #28a745 !important;
-        border-color: #28a745 !important;
-    }}
-    
-    div[data-testid="stSlider"] label {{
+
+    /* 4. Числовое значение (над ползунком) */
+    .stSlider div[data-testid="stThumbValue"] {{
         color: #28a745 !important;
-        font-weight: 500 !important;
     }}
-    
-    .logo-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
+
+    /* Убираем красный артефакт в самом начале полоски */
+    .stSlider [data-baseweb="slider"] > div::before {{
+        background-color: #28a745 !important;
     }}
-    
+
+    /* Остальные стили интерфейса */
+    [data-testid="stInputInstructions"] {{ display: none !important; }}
+    .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
     
     @media (prefers-color-scheme: light) {{
@@ -99,20 +97,13 @@ st.markdown(f"""
         .logo-dark {{ display: block; }}
     }}
     
-    @media (max-width: 640px) {{
-        .logo-img {{ width: 100px; }}
-    }}
-
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     .stNumberInput, .stSlider {{ width: 100% !important; }}
-    [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
-
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{
-        display: flex !important; justify-content: center !important; width: 100% !important;
-    }}
+    
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
+        border: none !important;
     }}
     .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
