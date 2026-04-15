@@ -49,16 +49,12 @@ def get_cached_logo(path):
 def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     try:
         with Image.open(bg_path) as img:
-            # 1. Подготовка фона (авто-кроп и ресайз в размер экрана)
+            # 1. Подготовка фона
             img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
 
             # 2. Логика размера логотипа
             lw, lh = logo_rgba.size
-            
-            # Находим масштаб, при котором логотип коснется края (по ширине или высоте)
             max_scale = min(tw / lw, th / lh)
-            
-            # Итоговый масштаб согласно слайдеру (0-100%)
             final_scale = max_scale * (user_scale_percent / 100)
             
             new_lw = max(1, int(lw * final_scale))
@@ -72,7 +68,6 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     except:
         return None
 
-# Загрузка ресурсов
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
@@ -81,15 +76,16 @@ st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
-# Слайдер от 0 до 100%
-with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 50)
+
+# ОБНОВЛЕННЫЙ ВВОД ШАГА (поддержка float)
+with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
+
+with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 70)
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     
     if logo_img and bg_files:
-        # Предпросмотр первого изображения
         preview = process_single_image(bg_files[0], logo_img, tw, th, logo_scale)
         if preview:
             buf = io.BytesIO()
@@ -107,13 +103,12 @@ button_placeholder = st.empty()
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     if button_placeholder.button("Создать контент"):
-        # Очищаем место кнопки, чтобы пользователь не нажимал дважды
         button_placeholder.empty()
         
         if not bg_files:
-            st.error("Папка images пуста или не найдена")
+            st.error("Папка images пуста")
         elif not logo_img:
-            st.error("Файл logo.png не найден")
+            st.error("Логотип logo.png не найден")
         else:
             with st.spinner("Создание контента..."):
                 zip_buffer = io.BytesIO()
