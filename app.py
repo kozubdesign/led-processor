@@ -4,7 +4,29 @@ import io
 import os
 import base64
 from PIL import Image, ImageOps
-from datetime import datetime
+
+# ====================== ФУНКЦИИ ПОИСКА ФАЙЛОВ ======================
+def find_file_case_insensitive(filename):
+    """Ищет файл в корне, игнорируя регистр (находит logo_H.png если просили logo_h.png)"""
+    if os.path.exists(filename):
+        return filename
+    current_dir = os.listdir('.')
+    for f in current_dir:
+        if f.lower() == filename.lower():
+            return f
+    return None
+
+# Очищаем кэш если файлы менялись
+@st.cache_resource
+def get_cached_logo(path):
+    found_path = find_file_case_insensitive(path)
+    if found_path:
+        try:
+            return Image.open(found_path).convert("RGBA")
+        except Exception as e:
+            st.error(f"Ошибка открытия {found_path}: {e}")
+            return None
+    return None
 
 # ====================== КОНСТАНТЫ ======================
 LOGO_H_PATH = "logo_h.png"
@@ -38,41 +60,21 @@ st.markdown("<div class='main-title'>Создать контент для LED-э
 preview_placeholder = st.empty()
 resolution_placeholder = st.empty()
 
-@st.cache_resource
-def get_cached_logo(path):
-    if os.path.exists(path):
-        try:
-            return Image.open(path).convert("RGBA")
-        except:
-            return None
-    return None
-
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     try:
-        # Автоматический выбор логотипа в зависимости от ориентации экрана
         active_logo = logo_h if tw >= th else logo_v
-        if not active_logo:
-            return None
+        if not active_logo: return None
 
         with Image.open(bg_path) as img:
-            # 1. Подготовка фона
             img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
-
-            # 2. Логика размера логотипа
             lw, lh = active_logo.size
             max_scale = min(tw / lw, th / lh)
             final_scale = max_scale * (user_scale_percent / 100)
-            
-            new_lw = max(1, int(lw * final_scale))
-            new_lh = max(1, int(lh * final_scale))
-            
+            new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
             logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
-
-            # 3. Наложение по центру
             img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
             return img
-    except:
-        return None
+    except: return None
 
 # Загрузка логотипов
 logo_h_img = get_cached_logo(LOGO_H_PATH)
@@ -90,9 +92,8 @@ with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 70)
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
-    
-    # Проверка наличия нужного логотипа для текущей ориентации
-    current_logo = logo_h_img if tw >= th else logo_v_img
+    is_hor = tw >= th
+    current_logo = logo_h_img if is_hor else logo_v_img
     
     if current_logo and bg_files:
         preview = process_single_image(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
@@ -106,8 +107,12 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
                 </div>
             ''', unsafe_allow_html=True)
             resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+    
     elif not current_logo:
-        st.warning(f"Ожидается файл {'logo_h.png' if tw >= th else 'logo_v.png'} для данной ориентации экрана")
+        target_file = LOGO_H_PATH if is_hor else LOGO_V_PATH
+        st.error(f"Критическая ошибка: файл **{target_file}** не обнаружен!")
+        # Техническая отладка для тебя:
+        st.write("Файлы в директории:", os.listdir('.'))
 
 st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
@@ -115,25 +120,15 @@ button_placeholder = st.empty()
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     if button_placeholder.button("Создать контент"):
         button_placeholder.empty()
-        
-        if not bg_files:
-            st.error("Папка images пуста")
-        elif not (logo_h_img or logo_v_img):
-            st.error("Файлы логотипов не найдены")
-        else:
-            with st.spinner("Создание контента..."):
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                    for f in bg_files:
-                        processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
-                        if processed:
-                            img_byte_arr = io.BytesIO()
-                            processed.save(img_byte_arr, format='JPEG', quality=95)
-                            zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-                
-                st.download_button(
-                    label="📥 Скачать контент",
-                    data=zip_buffer.getvalue(),
-                    file_name=f"led_{tw}x{th}.zip",
-                    mime="application/zip"
-                )
+        with st.spinner("Создание контента..."):
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                for f in bg_files:
+                    processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
+                    if processed:
+                        img_byte_arr = io.BytesIO()
+                        processed.save(img_byte_arr, format='JPEG', quality=95)
+                        zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+            
+            st.download_button(label="📥 Скачать контент", data=zip_buffer.getvalue(),
+                             file_name=f"led_{tw}x{th}.zip", mime="application/zip")
