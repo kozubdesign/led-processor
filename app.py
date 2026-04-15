@@ -72,61 +72,61 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
-    /* Скрытие кнопок +/- в числовых полях */
+    /* Отключаем стрелочки в инпутах */
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
 
-    .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
+    /* Центрируем основной контейнер */
+    .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
 
-    /* ГЛАВНЫЙ ФИКС ДЛЯ МОБИЛОК: Колонки в ряд */
+    /* КРИТИЧЕСКИЙ БЛОК: Заставляем колонки всегда быть в ряд */
     [data-testid="stHorizontalBlock"] {{
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important; /* Запрещаем перенос на новую строку */
         align-items: flex-end !important;
+        gap: 0.5rem !important;
     }}
 
-    /* Управление шириной колонок (Ширина, Высота, Шаг) */
+    /* Устанавливаем ширину колонок пропорционально c1, c2, c3, c4 */
     [data-testid="column"] {{
-        flex: 1 1 20% !important; /* Даем колонкам расти в ряд */
-        min-width: 80px !important; /* Минимальная ширина, чтобы не схлопнулись */
-        margin-bottom: 0px !important;
+        min-width: 0px !important;
+        flex-shrink: 1 !important;
+    }}
+    
+    /* Индивидуальная настройка ширины для c1-c3 (маленькие) и c4 (слайдер) */
+    [data-testid="column"]:nth-of-type(1), 
+    [data-testid="column"]:nth-of-type(2), 
+    [data-testid="column"]:nth-of-type(3) {{
+        flex: 1 1 15% !important;
+    }}
+    
+    [data-testid="column"]:nth-of-type(4) {{
+        flex: 2 1 55% !important;
     }}
 
-    /* Четвертая колонка (Слайдер) на мобильных прыгнет вниз и будет широкой */
+    /* Уменьшаем шрифты на мобилках, чтобы всё влезло */
     @media (max-width: 640px) {{
-        [data-testid="column"]:nth-of-type(4) {{
-            flex: 1 1 100% !important;
-            margin-top: 15px !important;
-        }}
+        label p {{ font-size: 12px !important; }}
+        input {{ font-size: 14px !important; padding: 5px !important; }}
+        .main-title {{ font-size: 1.2rem !important; }}
     }}
-
-    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
 
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
-    @media (max-width: 768px) {{
-        .preview-img {{ max-height: 120px !important; }}
-    }}
+    @media (max-width: 768px) {{ .preview-img {{ max-height: 150px !important; }} }}
 
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
-    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
-        content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 10px;
-        vertical-align: middle; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1);
-        border-top-color: #28a745; animation: spin 0.8s linear infinite;
-    }}
-    
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
-    .stButton > button, .stDownloadButton > button {{ width: 420px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
+    /* Кнопка */
+    div.stButton, div.stDownloadButton {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
+    .stButton > button, .stDownloadButton > button {{ width: 100% !important; max-width: 420px; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
     </style>
+    
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
@@ -143,11 +143,11 @@ logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Колонки
-c1, c2, c3, c4 = st.columns([1, 1, 1, 1.8])
-with c1: w_mm = st.number_input("Ширина", 0, value=0, key="w", on_change=reset_zip)
-with c2: h_mm = st.number_input("Высота", 0, value=0, key="h", on_change=reset_zip)
-with c3: pitch_str = st.text_input("Шаг", value="0", key="p", on_change=reset_zip)
+# Колонки (задаем веса)
+c1, c2, c3, c4 = st.columns([1, 1, 1, 2.5])
+with c1: w_mm = st.number_input("Ширина", 0, value=0, on_change=reset_zip)
+with c2: h_mm = st.number_input("Высота", 0, value=0, on_change=reset_zip)
+with c3: pitch_str = st.text_input("Шаг", value="0", on_change=reset_zip)
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -179,7 +179,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             </div>
         ''', unsafe_allow_html=True)
 
-# Кнопки
 st.markdown("<br>", unsafe_allow_html=True)
 action_placeholder = st.empty()
 
