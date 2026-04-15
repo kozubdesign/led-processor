@@ -62,7 +62,7 @@ def get_cached_logo(path):
         except: return None
     return None
 
-def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
+def process_single_image(bg_path, logo_rgba, tw, th, logo_p_unused):
     try:
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
@@ -70,7 +70,12 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
             nw, nh = (tw, int(tw / ir)) if ir < tr else (int(th * ir), th)
             img = img.resize((nw, nh), Image.Resampling.LANCZOS)
             img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
-            limit = int(min(tw, th) * (logo_percent / 100))
+            
+            # НОВАЯ ЛОГИКА: 65% ширины ИЛИ 30% высоты (выбираем меньшее)
+            limit_w = tw * 0.65
+            limit_h = th * 0.30
+            limit = int(min(limit_w, limit_h))
+            
             lw, lh = logo_rgba.size
             if max(lw, lh) > 0 and limit > 0:
                 scale = limit / max(lw, lh)
@@ -84,20 +89,20 @@ logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# 3. ПОЛЯ ВВОДА
+# 3. ПОЛЯ ВВОДА (Слайдер оставил, но логика теперь зашита жестко согласно ТЗ)
 st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
-with c4: logo_p = st.slider("Лого %", 0, 150, 60)
+with c4: st.info("Размер лого: Авто (65% шир. / 30% выс.)")
 
 # ЛОГИКА ОТОБРАЖЕНИЯ ПРЕВЬЮ
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     if logo_img and bg_files:
-        preview = process_single_image(bg_files[0], logo_img, tw, th, logo_p)
+        preview = process_single_image(bg_files[0], logo_img, tw, th, 60)
         if preview:
             buf = io.BytesIO()
             preview.save(buf, format="JPEG", quality=90)
@@ -114,22 +119,18 @@ st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
-    # Кнопка запуска процесса
     if button_placeholder.button("Создать контент"):
-        # Скрываем кнопку и показываем лоадер
         button_placeholder.empty()
-        
         with st.spinner("Создание контента..."):
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                 for f in bg_files:
-                    processed = process_single_image(f, logo_img, tw, th, logo_p)
+                    processed = process_single_image(f, logo_img, tw, th, 60)
                     if processed:
                         img_byte_arr = io.BytesIO()
                         processed.save(img_byte_arr, format='JPEG', quality=95)
                         zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
             
-            # После завершения показываем кнопку скачивания
             st.download_button(
                 label="📥 Скачать контент",
                 data=zip_buffer.getvalue(),
