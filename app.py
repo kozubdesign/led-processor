@@ -80,14 +80,9 @@ st.markdown(f"""
         .logo-dark {{ display: block; }}
     }}
     
-    @media (max-width: 640px) {{
-        .logo-img {{ width: 100px; }}
-    }}
-
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     .stNumberInput, .stSlider {{ width: 100% !important; }}
-    [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
-
+    
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
@@ -148,7 +143,7 @@ default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-# Оптимизация: Обрабатываем ТОЛЬКО 1 картинку для превью
+# Блок превью и текста разрешения
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -161,13 +156,13 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             </div>
         ''', unsafe_allow_html=True)
         
-        # Динамический заголовок разрешения
         res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
         resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 btn_placeholder = st.empty()
 
+# Блок кнопок управления
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
@@ -186,14 +181,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
-    else:
-        if btn_placeholder.button("Создать контент"):
-            st.session_state.processing = True
-            st.rerun()
-    else:
-        if btn_placeholder.button("Создать контент"):
-            st.session_state.processing = True
-            st.rerun()
     else:
         if btn_placeholder.button("Создать контент"):
             st.session_state.processing = True
