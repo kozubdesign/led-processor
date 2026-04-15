@@ -119,8 +119,8 @@ st.markdown(f"""
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
-preview_placeholder = st.empty()
-resolution_placeholder = st.empty()
+# Сначала создаем контейнеры для превью, чтобы они не прыгали вниз
+preview_container = st.container()
 
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
@@ -128,9 +128,9 @@ bg_files = [os.path.join("images", f) for f in os.listdir("images")
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
 c1, c2, c3 = st.columns(3)
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip, key="w_mm_input")
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip, key="h_mm_input")
-with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_zip, key="pitch_input")
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip, key="w_mm_in")
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip, key="h_mm_in")
+with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_zip, key="p_str_in")
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -148,36 +148,38 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 cs = st.columns(1)[0]
 default_scale = 50 if tw >= th else 40
-with cs: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="logo_scale_slider")
+with cs: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="l_scale_sl")
 
+# Рендерим превью ВНУТРИ контейнера СРАЗУ, чтобы оно не исчезало при генерации
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
         buf = io.BytesIO()
         preview.save(buf, format="JPEG", quality=75)
         img_str = base64.b64encode(buf.getvalue()).decode()
-        preview_placeholder.markdown(f'''
-            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #ddd;">
-            </div>
-        ''', unsafe_allow_html=True)
-        res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
-        resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
+        with preview_container:
+            st.markdown(f'''
+                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                    <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #ddd;">
+                </div>
+            ''', unsafe_allow_html=True)
+            res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
+            st.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # БЛОК КНОПОК
-button_container = st.container()
+action_area = st.container()
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
-    with button_container:
-        action_placeholder = st.empty()
+    with action_area:
+        placeholder = st.empty()
         
         if st.session_state.zip_ready:
             current_date = datetime.now().strftime("%y_%m_%d")
             zip_filename = f"{tw}x{th}_{current_date}.zip"
-            action_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary", key="download_zip_btn")
-        
+            placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary", key="dl_f_btn")
+            
         elif st.session_state.processing:
             zip_buffer = io.BytesIO()
             total_files = len(bg_files)
@@ -185,8 +187,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for i, f in enumerate(bg_files):
                     percent = int(((i + 1) / total_files) * 100)
-                    # Используем уникальный ключ для каждого шага отрисовки в цикле
-                    action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"btn_proc_{i}")
+                    placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"gen_pr_{i}")
                     
                     processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                     if processed:
@@ -197,8 +198,8 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             st.session_state.zip_ready = zip_buffer.getvalue()
             st.session_state.processing = False
             st.rerun()
-        
+            
         else:
-            if action_placeholder.button("Создать контент", type="primary", key="start_processing_btn"):
+            if placeholder.button("Создать контент", type="primary", key="start_btn"):
                 st.session_state.processing = True
                 st.rerun()
