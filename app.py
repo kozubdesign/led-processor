@@ -84,7 +84,7 @@ st.markdown(f"""
     }}
 
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
-    .logo-img {{ width: 150px; }}
+    .logo-img {{ width: 100px; }}
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
     button[disabled] p::before {{
