@@ -85,8 +85,8 @@ st.markdown(f"""
         width: 100% !important;
     }}
 
-    .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
-    .logo-img {{ width: 150px; }}
+    .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
+    .logo-img {{ width: 100px; }}
     
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
