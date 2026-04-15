@@ -100,8 +100,8 @@ st.markdown(f"""
     
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
-        padding: 10px; border-radius: 8px; margin: 10px 0; 
-        font-weight: normal; font-size: 0.6rem;
+        padding: 20px; border-radius: 8px; margin: 15px 0; 
+        font-weight: 500; font-size: 1.4rem;
     }}
     </style>
     <div class="logo-container">
