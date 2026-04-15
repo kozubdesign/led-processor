@@ -8,105 +8,87 @@ from datetime import datetime
 # --- КОНСТАНТЫ ---
 DEFAULT_LOGO_PATH = "logo.png"
 BLACK_LOGO_PATH = "logo_black.png"
+HEADER_LOGO_PATH = "logo_header.png"   # ← положи сюда свой треугольный логотип
 FAVICON_PATH = "favicon.ico"
-FAVICON_PNG = "favicon.png"
 SOURCE_FOLDER = "images"
 
-# --- ОПРЕДЕЛЕНИЕ ЛОГОТИПА ДЛЯ ШАПКИ ---
-def get_header_logo():
-    is_dark = st.get_option("theme.base") == "dark"
-    if is_dark and os.path.exists(BLACK_LOGO_PATH):
-        return BLACK_LOGO_PATH
-    elif os.path.exists(DEFAULT_LOGO_PATH):
-        return DEFAULT_LOGO_PATH
-    return None
-
 # --- НАСТРОЙКА СТРАНИЦЫ ---
-if os.path.exists(FAVICON_PATH):
-    st.set_page_config(page_title="LED Processor", page_icon=FAVICON_PATH, layout="centered")
-elif os.path.exists(FAVICON_PNG):
-    st.set_page_config(page_title="LED Processor", page_icon=FAVICON_PNG, layout="centered")
-else:
-    st.set_page_config(page_title="LED Processor", layout="centered")
+st.set_page_config(page_title="LED Processor", layout="centered")
 
-# --- CSS для максимальной центровки ---
+# --- CSS для идеальной центровки ---
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 800px !important;
+        max-width: 780px !important;
+        padding-top: 2rem !important;
         margin: 0 auto !important;
-    }
-    
-    h1 {
-        text-align: center !important;
-        font-size: 2.25rem !important;
-        margin-bottom: 0.8rem !important;
     }
     
     .header-logo {
         display: block;
-        margin: 0 auto 1rem auto !important;
-        height: 50px;
+        margin: 0 auto 1.2rem auto;
+        height: 65px;
         object-fit: contain;
     }
     
-    .preview-info {
+    h1 {
+        text-align: center !important;
+        font-size: 2.1rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    
+    .subtitle {
         text-align: center !important;
         color: #666;
         font-size: 1.05rem;
-        margin-bottom: 1.8rem !important;
+        margin-bottom: 2rem !important;
     }
     
-    /* Центрируем все поля ввода */
+    /* Центрируем все поля */
     div[data-testid="stNumberInput"] {
-        margin: 0 auto !important;
-        max-width: 320px !important;
+        margin: 0 auto 1rem auto !important;
+        max-width: 340px !important;
     }
     
     /* Узкое поле для шага пикселя */
-    .narrow-input {
-        max-width: 200px !important;
-        margin: 0 auto !important;
+    .narrow-field {
+        max-width: 220px !important;
+        margin: 0 auto 1.5rem auto !important;
     }
     
-    /* Кнопка по центру */
+    /* Красивая зелёная кнопка по центру */
     .stButton {
-        display: flex !important;
-        justify-content: center !important;
-        width: 100% !important;
+        display: flex;
+        justify-content: center;
     }
     .stButton > button {
-        height: 3.5rem !important;
-        font-weight: bold !important;
-        font-size: 1.08rem !important;
         background-color: #28a745 !important;
         color: white !important;
+        font-weight: bold !important;
+        font-size: 1.1rem !important;
+        height: 3.6rem !important;
+        padding: 0 2.5rem !important;
+        border-radius: 8px !important;
         min-width: 320px !important;
-        width: auto !important;
-        margin-top: 1.2rem !important;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
     }
     
     [data-testid="stImage"] {
         display: flex !important;
         justify-content: center !important;
-        margin: 1.8rem auto !important;
-    }
-    
-    .success-box {
-        text-align: center !important;
+        margin: 2rem auto !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- ЛОГОТИП В ШАПКЕ ---
-header_logo = get_header_logo()
-if header_logo:
-    st.image(header_logo, use_container_width=False, width=220, clamp=True)
+if os.path.exists(HEADER_LOGO_PATH):
+    st.image(HEADER_LOGO_PATH, use_container_width=False, width=180)
+elif os.path.exists(DEFAULT_LOGO_PATH):
+    st.image(DEFAULT_LOGO_PATH, use_container_width=False, width=180)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
-st.markdown('<p class="preview-info">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
 
 # --- SESSION STATE ---
 if 'zip_data' not in st.session_state:
@@ -116,8 +98,8 @@ if 'zip_data' not in st.session_state:
 if 'uploaded_logo' not in st.session_state:
     st.session_state.uploaded_logo = None
 
-# --- ЛОГОТИП ДЛЯ ОБРАБОТКИ ---
-def get_logo_image():
+# --- ЛОГО ДЛЯ ОБРАБОТКИ ---
+def get_processing_logo():
     if st.session_state.uploaded_logo is not None:
         return Image.open(st.session_state.uploaded_logo).convert("RGBA")
     if os.path.exists(DEFAULT_LOGO_PATH):
@@ -127,77 +109,68 @@ def get_logo_image():
             return None
     return None
 
-# --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ---
-def process_single_image(bg_path, logo_img, target_w, target_h, logo_percent=45):
+# --- ФУНКЦИЯ ОБРАБОТКИ ---
+def process_single_image(bg_path, logo_img, tw, th, logo_percent=45):
     try:
-        if not os.path.exists(bg_path) or logo_img is None:
-            return None
-            
         img = Image.open(bg_path).convert("RGB")
+        logo = logo_img.convert("RGBA")
         
+        # Crop-Fill
         ir = img.width / img.height
-        tr = target_w / target_h
+        tr = tw / th
         if ir < tr:
-            nw, nh = target_w, int(target_w / ir)
+            nw, nh = tw, int(tw / ir)
         else:
-            nh, nw = target_h, int(target_h * ir)
+            nh, nw = th, int(th * ir)
         
         img = img.resize((nw, nh), Image.Resampling.LANCZOS)
-        img = img.crop(((nw - target_w)//2, (nh - target_h)//2, 
-                       (nw + target_w)//2, (nh + target_h)//2))
+        img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
         
-        limit = int(min(target_w, target_h) * (logo_percent / 100))
-        lw = int(limit * (logo_img.width / logo_img.height))
-        lh = int(limit * (logo_img.height / logo_img.width))
-        
+        # Логотип
+        limit = int(min(tw, th) * (logo_percent / 100))
+        lw = int(limit * (logo.width / logo.height))
+        lh = int(limit * (logo.height / logo.width))
         if lw > limit:
             lw = limit
-            lh = int(lw * (logo_img.height / logo_img.width))
+            lh = int(lw * (logo.height / logo.width))
         else:
             lh = limit
-            lw = int(lh * (logo_img.width / logo_img.height))
+            lw = int(lh * (logo.width / logo.height))
         
-        logo_resized = logo_img.resize((lw, lh), Image.Resampling.LANCZOS)
-        img.paste(logo_resized, ((target_w - lw) // 2, (target_h - lh) // 2), logo_resized)
+        logo_res = logo.resize((lw, lh), Image.Resampling.LANCZOS)
+        img.paste(logo_res, ((tw - lw)//2, (th - lh)//2), logo_res)
         return img
-        
-    except Exception as e:
-        st.error(f"Ошибка: {e}")
+    except:
         return None
 
 # --- САЙДБАР ---
 with st.sidebar:
     st.header("Настройки")
     st.session_state.uploaded_logo = st.file_uploader("Загрузить другой логотип", 
-                                                     type=['png', 'jpg', 'jpeg'])
-    
+                                                     type=["png", "jpg", "jpeg"])
     if st.session_state.uploaded_logo:
-        st.success("✓ Логотип загружен")
+        st.success("Логотип загружен")
     elif os.path.exists(DEFAULT_LOGO_PATH):
         st.info("Используется logo.png")
     
     logo_percent = st.slider("Размер логотипа (%)", 20, 70, 45, 5)
 
-# --- ПАРАМЕТРЫ ЭКРАНА (всё по центру) ---
+# --- ПАРАМЕТРЫ ---
 st.markdown("### Параметры экрана")
 
-col1, col2 = st.columns([1, 1])
-with col1:
-    w_mm = st.number_input("Ширина экрана (мм)", 
-                          min_value=0, max_value=9999999, value=0, step=10)
-with col2:
-    h_mm = st.number_input("Высота экрана (мм)", 
-                          min_value=0, max_value=9999999, value=0, step=10)
+c1, c2 = st.columns(2)
+with c1:
+    w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
+with c2:
+    h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 
-# Узкое поле шага пикселя по центру
-pitch = st.number_input(
-    "Шаг пикселя (мм)", 
-    min_value=0.0, 
-    max_value=999.99999, 
-    value=0.0, 
-    format="%.5f", 
-    step=0.00001
-)
+# Узкое поле шага
+pitch = st.number_input("Шаг пикселя (мм)", 
+                       min_value=0.0, 
+                       max_value=999.99999, 
+                       value=0.0, 
+                       format="%.5f", 
+                       step=0.00001)
 
 fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.00001
 
@@ -205,60 +178,41 @@ if fields_filled:
     tw = int(round(w_mm / pitch))
     th = int(round(h_mm / pitch))
     st.success(f"**Разрешение: {tw} × {th} px**")
-else:
-    tw = th = 0
 
 # --- ПРЕВЬЮ ---
 if fields_filled:
-    logo_img = get_logo_image()
+    logo_img = get_processing_logo()
     if logo_img:
-        bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png','.jpg','.jpeg'))]
         if bg_files:
-            preview_img = process_single_image(
-                os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent
-            )
-            if preview_img:
+            preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
+            if preview:
                 scale = min(800 / tw, 400 / th, 1.0)
-                display_w = int(tw * scale)
-                st.image(preview_img, width=display_w, caption=f"Превью — {bg_files[0]}")
-        else:
-            st.warning("В папке **images** нет изображений")
-    else:
-        st.error("Логотип не найден")
+                st.image(preview, width=int(tw * scale))
 
-# --- КНОПКА СОЗДАНИЯ ---
+# --- КНОПКА ---
 if st.button("🚀 Создать архив с контентом", type="primary"):
     if fields_filled:
-        logo_img = get_logo_image()
-        if logo_img and os.path.exists(SOURCE_FOLDER):
-            with st.spinner("Обработка изображений..."):
-                bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-                if bg_files:
-                    zip_buffer = io.BytesIO()
-                    processed = 0
-                    progress = st.progress(0)
-                    
-                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-                        for i, fname in enumerate(bg_files):
-                            res = process_single_image(
-                                os.path.join(SOURCE_FOLDER, fname), logo_img, tw, th, logo_percent
-                            )
-                            if res:
-                                buf = io.BytesIO()
-                                res.save(buf, format="JPEG", quality=95, optimize=True)
-                                zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", buf.getvalue())
-                                processed += 1
-                            progress.progress((i + 1) / len(bg_files))
-                    
-                    zip_buffer.seek(0)
-                    st.session_state.zip_data = zip_buffer.getvalue()
-                    st.session_state.file_name = f"LED_{tw}x{th}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
-                    
-                    st.success(f"✅ Готово! Обработано {processed} изображений.")
+        logo_img = get_processing_logo()
+        if logo_img:
+            with st.spinner("Подготовка архива..."):
+                bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png','.jpg','.jpeg'))]
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for i, f in enumerate(bg_files):
+                        res = process_single_image(os.path.join(SOURCE_FOLDER, f), logo_img, tw, th, logo_percent)
+                        if res:
+                            buf = io.BytesIO()
+                            res.save(buf, format="JPEG", quality=95, optimize=True)
+                            zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", buf.getvalue())
+                zip_buffer.seek(0)
+                st.session_state.zip_data = zip_buffer.getvalue()
+                st.session_state.file_name = f"LED_{tw}x{th}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+                st.success("✅ Архив готов!")
     else:
-        st.warning("Заполните все параметры экрана")
+        st.warning("Заполните все поля")
 
-# --- КНОПКА СКАЧИВАНИЯ ---
+# --- СКАЧИВАНИЕ ---
 if st.session_state.zip_data is not None:
     st.download_button(
         label="💾 Скачать ZIP-архив",
@@ -267,9 +221,5 @@ if st.session_state.zip_data is not None:
         mime="application/zip",
         type="primary"
     )
-    
-    if st.button("Очистить результат"):
-        st.session_state.zip_data = None
-        st.rerun()
 
 st.caption("• Логотип по умолчанию: logo.png (можно заменить в сайдбаре)")
