@@ -78,7 +78,6 @@ st.markdown(f"""
     .logo-img {{ width: 150px; }}
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
-    /* Спиннер в кнопке теперь берет белый цвет, так как фон кнопки зеленый по теме */
     button[disabled] p::before {{
         content: ""; display: inline-block; width: 20px; height: 20px; margin-right: 12px;
         vertical-align: middle; border-radius: 50%;
@@ -92,7 +91,6 @@ st.markdown(f"""
     @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     
-    /* Центрирование и фиксированная ширина кнопок */
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
@@ -102,7 +100,8 @@ st.markdown(f"""
     
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
-        padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
+        padding: 10px; border-radius: 8px; margin: 10px 0; 
+        font-weight: normal; font-size: 0.6rem;
     }}
     </style>
     <div class="logo-container">
@@ -167,7 +166,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        st.download_button(label="Скачать архив", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
+        st.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     
     elif st.session_state.processing:
         st.button("Идет генерация...", disabled=True)
