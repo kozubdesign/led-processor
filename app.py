@@ -58,6 +58,19 @@ st.markdown(f"""
         display: none !important;
     }}
     
+    /* Стилизация ползунка (Slider) в зеленый цвет */
+    [data-testid="stSlider"] label {{
+        color: #28a745 !important;
+        font-weight: 600 !important;
+    }}
+    [data-testid="stSlider"] [data-baseweb="slider"] > div > div {{
+        background-color: #28a745 !important;
+    }}
+    [data-testid="stSlider"] [role="slider"] {{
+        background-color: #28a745 !important;
+        border: 2px solid #28a745 !important;
+    }}
+
     .logo-container {{
         display: flex;
         justify-content: center;
