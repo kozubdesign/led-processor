@@ -13,26 +13,11 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# ИСПРАВЛЕННЫЙ CSS
 st.markdown("""
     <style>
-    .block-container { 
-        max-width: 800px !important; 
-        margin: 0 auto !important; 
-        padding-top: 1rem !important; 
-    }
-    
-    [data-testid="stHeader"] {
-        display: none;
-    }
-
-    .main-title {
-        text-align: center;
-        font-size: 1.8rem;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-
+    .block-container { max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }
+    [data-testid="stHeader"] { display: none; }
+    .main-title { text-align: center; font-size: 1.8rem; font-weight: bold; margin-bottom: 10px; }
     div.stButton, div.stDownloadButton, div.element-container:has(button) {
         display: flex !important; justify-content: center !important; width: 100% !important;
     }
@@ -40,7 +25,6 @@ st.markdown("""
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
     }
-
     .res-box { 
         text-align: center; background-color: #d4edda; color: #155724; 
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
@@ -48,10 +32,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. ШАПКА
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
-# 2. МЕСТО ПОД ПРЕВЬЮ И РАЗРЕШЕНИЕ
 preview_placeholder = st.empty()
 resolution_placeholder = st.empty()
 
@@ -66,23 +48,38 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     try:
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
+            # 1. Кроп и ресайз фона под размер экрана
             ir, tr = img.width / img.height, tw / th
             nw, nh = (tw, int(tw / ir)) if ir < tr else (int(th * ir), th)
             img = img.resize((nw, nh), Image.Resampling.LANCZOS)
             img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
             
-            # БАЗОВОЕ ПРАВИЛО: 65% ширины или 30% высоты (что меньше)
+            # 2. РАСЧЕТ РАЗМЕРА ЛОГОТИПА (ЛОГИКА "АВТО")
+            # Вычисляем лимит по ширине (65%) и по высоте (30%)
+            # Берем МИНЬШЕЕ из них, чтобы лого гарантированно вписалось
             base_limit = min(tw * 0.65, th * 0.30)
             
-            # КОРРЕКТИРОВКА БЕГУНКОМ (user_scale_percent / 100)
-            final_limit = int(base_limit * (user_scale_percent / 100))
+            # Применяем бегунок к базовому лимиту
+            final_pixel_size = base_limit * (user_scale_percent / 100)
             
+            # 3. Ресайз самого логотипа
             lw, lh = logo_rgba.size
-            if max(lw, lh) > 0 and final_limit > 0:
-                scale = final_limit / max(lw, lh)
-                new_size = (int(lw * scale), int(lh * scale))
-                logo_res = logo_rgba.resize(new_size, Image.Resampling.LANCZOS)
-                img.paste(logo_res, ((tw - new_size[0])//2, (th - new_size[1])//2), logo_res)
+            logo_aspect = lw / lh
+            
+            if logo_aspect > 1: # Лого горизонтальное
+                new_lw = int(final_pixel_size)
+                new_lh = int(final_pixel_size / logo_aspect)
+            else: # Лого вертикальное или квадратное
+                new_lh = int(final_pixel_size)
+                new_lw = int(final_pixel_size * logo_aspect)
+            
+            # Безопасная проверка, чтобы не упало при нуле
+            new_lw, new_lh = max(1, new_lw), max(1, new_lh)
+            
+            logo_res = logo_rgba.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
+            
+            # 4. Вставка по центру
+            img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
             return img
     except: return None
 
@@ -90,16 +87,13 @@ logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# 3. ПОЛЯ ВВОДА
 st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
-# Бегунок возвращен. 100% = точное соответствие твоему правилу.
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 200, 100)
 
-# ЛОГИКА ОТОБРАЖЕНИЯ ПРЕВЬЮ
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
@@ -116,7 +110,6 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
             ''', unsafe_allow_html=True)
             resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
 
-# 4. КНОПКИ И ПРОЦЕСС
 st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
 
