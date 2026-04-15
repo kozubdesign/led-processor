@@ -142,7 +142,6 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 with c4:
     # Определяем ориентацию для выбора дефолтного значения
-    # Если ширина >= высота — 35%, иначе — 50%
     if tw >= th and tw > 0:
         current_default = 35
         orientation_key = "horiz"
@@ -150,17 +149,15 @@ with c4:
         current_default = 50
         orientation_key = "vert"
     
-    # Используем динамический key, чтобы слайдер сбрасывался при смене ориентации
-    # Добавляем параметр step=5
-logo_scale = st.slider(
-    "Размер логотипа %", 
-    0, 
-    100, 
-    current_default, 
-    step=5,  # Вот этот параметр
-    on_change=reset_zip, 
-    key=f"slider_{orientation_key}"
-)
+    # ИСПОЛЬЗУЕМ STEP=5 ДЛЯ ПОЛЗУНКА
+    logo_scale = st.slider(
+        "Размер логотипа %", 
+        0, 100, 
+        current_default, 
+        step=5, 
+        on_change=reset_zip, 
+        key=f"slider_{orientation_key}"
+    )
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
