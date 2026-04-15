@@ -13,7 +13,7 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# ФИНАЛЬНЫЙ CSS (Центрирование через глубокие селекторы)
+# ФИНАЛЬНЫЙ CSS
 st.markdown("""
     <style>
     .block-container {
@@ -22,9 +22,14 @@ st.markdown("""
         padding-top: 2rem !important;
     }
 
-    h1 { text-align: center !important; margin-bottom: 20px !important; }
+    /* Заголовок уменьшен в 1.5 раза (с ~2.25rem до 1.5rem) */
+    .main-title { 
+        text-align: center !important; 
+        margin-bottom: 20px !important;
+        font-size: 1.5rem !important;
+        font-weight: bold;
+    }
 
-    /* Центрирование контейнеров кнопок и самих кнопок */
     div.stButton, div.stDownloadButton, div.element-container:has(button) {
         display: flex !important;
         justify-content: center !important;
@@ -39,14 +44,12 @@ st.markdown("""
         font-weight: 600 !important;
         border-radius: 8px !important;
         border: none !important;
-        transition: background 0.3s;
     }
     
     .stButton > button:hover, .stDownloadButton > button:hover {
         background-color: #218838 !important;
     }
 
-    /* Плашка разрешения */
     div[data-testid="stNotification"] {
         max-width: 600px !important;
         margin: 10px auto !important;
@@ -84,16 +87,17 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
     except: return None
 
 # ====================== ИНТЕРФЕЙС ======================
-st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
+# Ввод данных с дефолтными значениями
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
-with col_w: w_mm = st.number_input("Ширина (мм)", 0, step=10)
-with col_h: h_mm = st.number_input("Высота (мм)", 0, step=10)
-with col_p: pitch = st.number_input("Шаг (мм)", 0, step=1)
+with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=8000, step=10)
+with col_h: h_mm = st.number_input("Высота (мм)", 0, value=4000, step=10)
+with col_p: pitch = st.number_input("Шаг (мм)", 0, value=10, step=1)
 with col_s: logo_percent = st.slider("Лого %", 0, 150, 60, 5)
 
 if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
@@ -113,10 +117,8 @@ if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
     
     st.success(f"**Разрешение: {tw} × {th} px**")
 
-    # Состояние
     if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 
-    # Кнопки (вне колонок для центрирования)
     if st.button("Генерировать контент"):
         with st.spinner("Сборка..."):
             zip_buffer = io.BytesIO()
