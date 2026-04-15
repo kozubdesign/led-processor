@@ -43,6 +43,7 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
+# Добавлена фавиконка через page_icon
 st.set_page_config(
     page_title="LED Generator", 
     page_icon="favicon.png", 
@@ -54,7 +55,24 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
-    .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
+    /* Установка фона всей страницы */
+    .stApp {{
+        background-color: #f5f7f9;
+    }}
+
+    /* Адаптация фона под темную тему, если пользователь её выберет */
+    @media (prefers-color-scheme: dark) {{
+        .stApp {{
+            background-color: #0e1117;
+        }
+    }}
+
+    .block-container {{ 
+        max-width: 800px !important; 
+        margin: 0 auto !important; 
+        padding-top: 1rem !important; 
+    }}
+    
     [data-testid="stHeader"] {{ display: none; }}
     
     /* Убираем подсказки "Press Enter to apply" */
@@ -86,7 +104,7 @@ st.markdown(f"""
 
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     .stNumberInput, .stSlider {{ width: 100% !important; }}
-    [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
+    [data-testid="column"] {{ padding-left: 0.5rem !important; padding-right: 0.5rem !important; }}
 
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
@@ -94,10 +112,13 @@ st.markdown(f"""
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
+        border: none !important;
     }}
+    
     .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
+        border: 1px solid #c3e6cb;
     }}
     </style>
     
@@ -142,7 +163,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
+                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             </div>
         ''', unsafe_allow_html=True)
         resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
