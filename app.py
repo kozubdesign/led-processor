@@ -77,7 +77,7 @@ st.markdown(f"""
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
 
-    .block-container {{ max-width: 1000px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
+    .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
     /* СТИЛИ ДЛЯ КОЛОНОК (чтобы стояли в ряд) */
