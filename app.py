@@ -12,25 +12,25 @@ SOURCE_FOLDER = "images"
 # 1. Настройка страницы
 st.set_page_config(page_title="LED Processor", layout="centered")
 
-# Ультимативный CSS для центровки всего интерфейса
+# Ультимативный CSS для центровки и исправления отображения
 st.markdown("""
     <style>
     /* 1. Общие отступы страницы */
     .block-container { 
         padding-top: 2rem !important; 
-        padding-bottom: 0rem !important;
-        max-width: 800px; /* Ограничиваем ширину для лучшей центровки */
+        padding-bottom: 2rem !important;
+        max-width: 800px;
     }
     
     /* 2. Центровка заголовка */
     h1 { 
         text-align: center !important; 
         font-size: 2.2rem !important;
-        line-height: 1.3 !important;
-        margin-bottom: 1.5rem !important;
+        line-height: 1.4 !important;
+        margin-bottom: 1rem !important;
     }
     
-    /* 3. Центровка всех текстов, меток (label) и подписей */
+    /* 3. Центровка всех текстов и меток */
     .stMarkdown, .stCaption, .stText, label, p {
         text-align: center !important;
         justify-content: center !important;
@@ -38,14 +38,12 @@ st.markdown("""
         width: 100% !important;
     }
     
-    /* 4. Центровка полей ввода (Number Input) */
+    /* 4. Центровка полей ввода */
     div[data-testid="stNumberInput"] {
-        margin-left: auto !important;
-        margin-right: auto !important;
+        margin: 0 auto !important;
         width: 100% !important;
     }
     
-    /* Центрируем само поле внутри контейнера */
     div[data-testid="stNumberInput"] > div {
         margin: 0 auto !important;
     }
@@ -63,12 +61,17 @@ st.markdown("""
         height: 3.5rem !important;
         font-weight: bold !important;
         padding: 0 2rem !important;
-        width: auto !important; /* Кнопка будет по ширине текста, но в центре */
-        min-width: 250px !important;
+        width: auto !important;
+        min-width: 280px !important;
         border: none;
-        margin-top: 1rem;
+        margin-top: 1.5rem;
     }
     
+    div.stButton > button:hover {
+        background-color: #218838 !important;
+        border: none;
+    }
+
     /* 6. Центровка контейнера превью */
     [data-testid="stImage"] {
         display: flex !important;
@@ -76,7 +79,7 @@ st.markdown("""
         margin: 0 auto !important;
     }
 
-    /* Убираем стандартные колонки Streamlit, если они мешают на мобильных */
+    /* Исправление для мобильных версий */
     [data-testid="column"] {
         display: flex;
         flex-direction: column;
@@ -90,14 +93,19 @@ st.markdown("<h1>Создать контент для LED-экрана</h1>", un
 # --- ФУНКЦИЯ ОБРАБОТКИ ---
 def process_single_image(bg_path, logo_path, tw, th):
     try:
+        if not os.path.exists(bg_path) or not os.path.exists(logo_path):
+            return None
+            
         img = Image.open(bg_path).convert("RGB")
         logo = Image.open(logo_path).convert("RGBA")
         
+        # Ресайз фона под целевое разрешение (Crop Fill)
         ir, tr = img.width / img.height, tw / th
         nw, nh = (tw, int(tw / ir)) if ir < tr else (int(th * ir), th)
         img = img.resize((nw, nh), Image.Resampling.LANCZOS)
         img = img.crop(((nw - tw) / 2, (nh - th) / 2, (nw + tw) / 2, (nh + th) / 2))
 
+        # Наложение лого (центрированное, 45% от размера экрана)
         h_limit, w_limit = int(th * 0.45), int(tw * 0.45)
         lw_h = int(h_limit * (logo.width / logo.height))
         lh_w = int(w_limit * (logo.height / logo.width))
@@ -106,16 +114,17 @@ def process_single_image(bg_path, logo_path, tw, th):
         l_res = logo.resize((lw, lh), Image.Resampling.LANCZOS)
         img.paste(l_res, ((tw - lw) // 2, (th - lh) // 2), l_res)
         return img
-    except Exception:
+    except Exception as e:
+        st.error(f"Ошибка при обработке {os.path.basename(bg_path)}: {e}")
         return None
 
 # --- ИНТЕРФЕЙС ---
 
-# Место для превью
+# Сначала превью
 preview_placeholder = st.empty()
 
-# Параметры в одной центральной колонке (используем узкую колонку для фокуса)
-_, central_col, _ = st.columns([0.6, 1, 0.6])
+# Параметры (центрированная колонка)
+_, central_col, _ = st.columns([0.5, 1, 0.5])
 
 with central_col:
     st.write("")
@@ -133,7 +142,7 @@ with central_col:
     st.write("")
     process_btn = st.button("Скачать архив с контентом")
 
-# Отрисовка превью
+# Отрисовка превью (800x300 max)
 with preview_placeholder:
     if fields_filled:
         if os.path.exists(SOURCE_FOLDER) and os.path.exists(LOGO_PATH):
@@ -145,29 +154,33 @@ with preview_placeholder:
                     disp_w = int(tw * scale)
                     st.image(img_preview, width=disp_w)
             else:
-                st.warning("Папка 'images' пуста")
+                st.warning("В папке 'images' нет подходящих файлов.")
+        else:
+            st.error("Не найден logo.png или папка 'images'.")
     else:
         st.info("Введите параметры экрана")
 
 # --- СБОРКА ZIP ---
 if process_btn and fields_filled:
-    with st.spinner('Сборка...'):
+    with st.spinner('Подготовка контента...'):
         bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-            for i, f_name in enumerate(bg_files):
-                res = process_single_image(os.path.join(SOURCE_FOLDER, f_name), LOGO_PATH, tw, th)
-                if res:
-                    buf = io.BytesIO()
-                    res.save(buf, format='JPEG', quality=95)
-                    zip_file.writestr(f"{tw}x{th}_{i+1}.jpg", buf.getvalue())
+        if not bg_files:
+            st.error("Нет изображений для обработки.")
+        else:
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+                for i, f_name in enumerate(bg_files):
+                    res = process_single_image(os.path.join(SOURCE_FOLDER, f_name), LOGO_PATH, tw, th)
+                    if res:
+                        buf = io.BytesIO()
+                        res.save(buf, format='JPEG', quality=95)
+                        zip_file.writestr(f"{tw}x{th}_{i+1}.jpg", buf.getvalue())
 
-        # Кнопка скачивания внутри центральной колонки
-        with central_col:
-            st.download_button(
-                label="✅ СОХРАНИТЬ ZIP-АРХИВ",
-                data=zip_buffer.getvalue(),
-                file_name=f"LED_{tw}x{th}.zip",
-                mime="application/zip",
-                use_container_width=True
-            )
+            with central_col:
+                st.download_button(
+                    label="✅ СОХРАНИТЬ ZIP-АРХИВ",
+                    data=zip_buffer.getvalue(),
+                    file_name=f"LED_{tw}x{th}.zip",
+                    mime="application/zip",
+                    use_container_width=True
+                )
