@@ -14,6 +14,13 @@ def get_cached_logo(path):
         except: return None
     return None
 
+def get_base64_img(path):
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    return ""
+
 @st.cache_data(show_spinner=False)
 def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent):
     return process_single_image(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent)
@@ -36,30 +43,64 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
 # ====================== НАСТРОЙКА UI ======================
 st.set_page_config(page_title="LED Generator", layout="wide")
 
-st.markdown("""
-    <style>
-    .block-container { max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }
-    [data-testid="stHeader"] { display: none; }
-    .main-title { text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }
-    
-    .stNumberInput, .stSlider { width: 100% !important; }
-    [data-testid="column"] { padding-left: 0rem !important; padding-right: 0rem !important; }
+logo_black_base64 = get_base64_img("logo_black.png")
+logo_h_base64 = get_base64_img("logo_h.png")
 
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {
+st.markdown(f"""
+    <style>
+    .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
+    [data-testid="stHeader"] {{ display: none; }}
+    
+    .logo-container {{
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
+    }}
+    
+    /* Логика отображения логотипов в зависимости от темы */
+    .logo-img {{ width: 300px; }}
+    
+    /* Светлая тема (лого black) */
+    @media (prefers-color-scheme: light) {{
+        .logo-dark {{ display: none; }}
+        .logo-light {{ display: block; }}
+    }}
+    /* Темная тема (лого h) */
+    @media (prefers-color-scheme: dark) {{
+        .logo-light {{ display: none; }}
+        .logo-dark {{ display: block; }}
+    }}
+    
+    /* Адаптация под мобильные устройства */
+    @media (max-width: 640px) {{
+        .logo-img {{ width: 200px; }}
+    }}
+
+    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
+    .stNumberInput, .stSlider {{ width: 100% !important; }}
+    [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
+
+    div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
-    }
-    .stButton > button, .stDownloadButton > button {
+    }}
+    .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
-    }
-    .res-box { 
+    }}
+    .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
-    }
+    }}
     </style>
+    
+    <div class="logo-container">
+        <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
+        <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
+    </div>
+    <div class='main-title'>LED Content Generator</div>
     """, unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>LED Content Generator</div>", unsafe_allow_html=True)
+# ====================== ЛОГИКА ПРИЛОЖЕНИЯ ======================
 
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
@@ -72,7 +113,6 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Контролы
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
@@ -87,7 +127,6 @@ default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-# Превью
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
     if preview:
@@ -108,12 +147,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        btn_placeholder.download_button(
-            label="Скачать", 
-            data=st.session_state.zip_ready, 
-            file_name=zip_filename, 
-            mime="application/zip"
-        )
+        btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
     elif st.session_state.processing:
         btn_placeholder.button("⏳ Генерируем...", disabled=True)
         zip_buffer = io.BytesIO()
