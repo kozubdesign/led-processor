@@ -30,7 +30,7 @@ st.markdown("""
     h1 {
         text-align: center !important;
         font-size: 2.3rem !important;
-        margin-bottom: 1.5rem !important;
+        margin-bottom: 1.2rem !important;
     }
     .stButton > button {
         height: 3.6rem !important;
@@ -39,7 +39,7 @@ st.markdown("""
         background-color: #28a745 !important;
         color: white !important;
         width: 100% !important;
-        margin-top: 1rem;
+        margin-top: 1.2rem;
     }
     .stButton > button:hover {
         background-color: #218838 !important;
@@ -49,35 +49,40 @@ st.markdown("""
         justify-content: center !important;
         margin: 1.5rem auto !important;
     }
+    .preview-info {
+        text-align: center !important;
+        font-size: 1.05rem !important;
+        color: #555;
+        margin: 1rem 0 1.5rem 0;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 
+# Информационное сообщение под заголовком
+st.markdown('<p class="preview-info">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
+
 # --- SESSION STATE ---
 if 'zip_data' not in st.session_state:
     st.session_state.zip_data = None
     st.session_state.file_name = None
-    st.session_state.resolution = None
 
-if 'logo_image' not in st.session_state:
-    st.session_state.logo_image = None
+if 'uploaded_logo' not in st.session_state:
+    st.session_state.uploaded_logo = None
 
-# --- ЗАГРУЗКА ЛОГОТИПА (с приоритетом загруженного) ---
+# --- ПОЛУЧЕНИЕ ЛОГОТИПА ---
 def get_logo_image():
-    uploaded = st.session_state.get('uploaded_logo')
-    if uploaded is not None:
-        return Image.open(uploaded).convert("RGBA")
-    
+    if st.session_state.uploaded_logo is not None:
+        return Image.open(st.session_state.uploaded_logo).convert("RGBA")
     if os.path.exists(DEFAULT_LOGO_PATH):
         try:
             return Image.open(DEFAULT_LOGO_PATH).convert("RGBA")
         except:
-            st.warning("Не удалось открыть logo.png")
             return None
     return None
 
-# --- ФУНКЦИЯ ОБРАБОТКИ ---
+# --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ---
 def process_single_image(bg_path, logo_img, target_w, target_h, logo_percent=45):
     try:
         if not os.path.exists(bg_path) or logo_img is None:
@@ -97,7 +102,7 @@ def process_single_image(bg_path, logo_img, target_w, target_h, logo_percent=45)
         img = img.crop(((nw - target_w)//2, (nh - target_h)//2, 
                        (nw + target_w)//2, (nh + target_h)//2))
         
-        # Наложение логотипа
+        # Логотип
         limit = int(min(target_w, target_h) * (logo_percent / 100))
         lw = int(limit * (logo_img.width / logo_img.height))
         lh = int(limit * (logo_img.height / logo_img.width))
@@ -110,52 +115,59 @@ def process_single_image(bg_path, logo_img, target_w, target_h, logo_percent=45)
             lw = int(lh * (logo_img.width / logo_img.height))
         
         logo_resized = logo_img.resize((lw, lh), Image.Resampling.LANCZOS)
-        
-        paste_x = (target_w - lw) // 2
-        paste_y = (target_h - lh) // 2
-        
-        img.paste(logo_resized, (paste_x, paste_y), logo_resized)
+        img.paste(logo_resized, ((target_w - lw) // 2, (target_h - lh) // 2), logo_resized)
         return img
         
     except Exception as e:
-        st.error(f"Ошибка обработки изображения: {e}")
+        st.error(f"Ошибка: {e}")
         return None
 
 # --- САЙДБАР ---
 with st.sidebar:
     st.header("Настройки")
     
-    # Загрузка логотипа
-    uploaded_logo = st.file_uploader("Загрузить другой логотип", 
-                                    type=['png', 'jpg', 'jpeg'],
-                                    key="uploaded_logo")
+    st.session_state.uploaded_logo = st.file_uploader(
+        "Загрузить другой логотип", 
+        type=['png', 'jpg', 'jpeg']
+    )
     
-    if uploaded_logo:
-        st.success("✓ Логотип загружен и используется")
+    if st.session_state.uploaded_logo:
+        st.success("✓ Логотип загружен")
     elif os.path.exists(DEFAULT_LOGO_PATH):
-        st.info("Используется logo.png из папки")
-    else:
-        st.error("Файл logo.png не найден!")
+        st.info("Используется logo.png")
     
-    # Размер логотипа
-    logo_percent = st.slider("Размер логотипа (%) от экрана", 
+    logo_percent = st.slider("Размер логотипа (%)", 
                             min_value=20, max_value=70, 
                             value=45, step=5)
 
-# --- ОСНОВНОЙ ИНТЕРФЕЙС ---
-_, col, _ = st.columns([0.4, 1.2, 0.4])
-with col:
+# --- ПАРАМЕТРЫ ЭКРАНА ---
+_, central_col, _ = st.columns([0.4, 1.2, 0.4])
+
+with central_col:
     st.markdown("### Параметры экрана")
     
-    c1, c2 = st.columns(2)
-    with c1:
-        w_mm = st.number_input("Ширина экрана (мм)", min_value=0, value=0, step=10)
-    with c2:
-        h_mm = st.number_input("Высота экрана (мм)", min_value=0, value=0, step=10)
+    col1, col2 = st.columns(2)
+    with col1:
+        w_mm = st.number_input("Ширина экрана (мм)", 
+                              min_value=0, 
+                              max_value=9999999,   # максимум 7 цифр
+                              value=0, 
+                              step=10)
+    with col2:
+        h_mm = st.number_input("Высота экрана (мм)", 
+                              min_value=0, 
+                              max_value=9999999,   # максимум 7 цифр
+                              value=0, 
+                              step=10)
     
-    pitch = st.number_input("Шаг пикселя (мм)", min_value=0.0, value=0.0, format="%.2f", step=0.01)
+    pitch = st.number_input("Шаг пикселя (мм)", 
+                           min_value=0.0, 
+                           max_value=999.99999,  # ограничение на 5 значащих цифр
+                           value=0.0, 
+                           format="%.5f", 
+                           step=0.00001)
     
-    fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.01
+    fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.00001
     
     if fields_filled:
         tw = int(round(w_mm / pitch))
@@ -164,7 +176,7 @@ with col:
     else:
         tw = th = 0
 
-# --- ПРЕВЬЮ (ограничено 800×500) ---
+# --- ПРЕВЬЮ (максимум 800×400) ---
 preview_placeholder = st.empty()
 
 with preview_placeholder:
@@ -175,36 +187,31 @@ with preview_placeholder:
                        if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
             
             if bg_files:
-                preview = process_single_image(
+                preview_img = process_single_image(
                     os.path.join(SOURCE_FOLDER, bg_files[0]), 
                     logo_img, tw, th, logo_percent
                 )
-                if preview:
-                    # Ограничение размера превью
-                    scale = min(800 / tw, 500 / th, 1.0)
-                    display_width = int(tw * scale)
-                    st.image(preview, width=display_width, 
+                if preview_img:
+                    # Жёсткое ограничение превью: 800x400
+                    scale = min(800 / tw, 400 / th, 1.0)
+                    display_w = int(tw * scale)
+                    st.image(preview_img, width=display_w, 
                             caption=f"Превью — {bg_files[0]}")
             else:
                 st.warning("В папке **images** нет изображений")
         else:
-            st.error("Логотип не загружен")
-    else:
-        st.info("Введите параметры экрана, чтобы увидеть превью")
+            st.error("Логотип не найден")
+    # Сообщение уже выведено выше под заголовком
 
-# --- ОБРАБОТКА И ZIP ---
+# --- КНОПКА ОБРАБОТКИ ---
 if st.button("🚀 Создать архив с контентом", type="primary", use_container_width=True) and fields_filled:
     logo_img = get_logo_image()
-    if not logo_img:
-        st.error("Не удалось загрузить логотип")
-    else:
+    if logo_img:
         with st.spinner("Обработка изображений..."):
             bg_files = [f for f in os.listdir(SOURCE_FOLDER) 
                        if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
             
-            if not bg_files:
-                st.error("Нет изображений в папке images")
-            else:
+            if bg_files:
                 zip_buffer = io.BytesIO()
                 processed = 0
                 progress_bar = st.progress(0)
@@ -220,8 +227,7 @@ if st.button("🚀 Создать архив с контентом", type="prima
                             result.save(buf, format="JPEG", quality=95, optimize=True)
                             zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", buf.getvalue())
                             processed += 1
-                        
-                        progress_bar.progress((i+1) / len(bg_files))
+                        progress_bar.progress((i + 1) / len(bg_files))
                 
                 zip_buffer.seek(0)
                 st.session_state.zip_data = zip_buffer.getvalue()
@@ -231,7 +237,7 @@ if st.button("🚀 Создать архив с контентом", type="prima
 
 # --- СКАЧИВАНИЕ ---
 if st.session_state.zip_data is not None:
-    with col:
+    with central_col:
         st.download_button(
             label="💾 Скачать ZIP-архив",
             data=st.session_state.zip_data,
@@ -243,7 +249,6 @@ if st.session_state.zip_data is not None:
         
         if st.button("Очистить результат"):
             st.session_state.zip_data = None
-            st.session_state.file_name = None
             st.rerun()
 
-st.caption("Логотип по умолчанию: logo.png • Можно заменить через загрузчик в сайдбаре")
+st.caption("• Логотип по умолчанию: logo.png (можно заменить в сайдбаре)")
