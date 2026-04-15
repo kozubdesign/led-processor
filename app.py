@@ -72,30 +72,34 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
+    /* Скрытие кнопок +/- в числовых полях */
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
 
     .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    
-    /* Десктопная версия: колонки в ряд */
-    [data-testid="column"] {{ 
-        min-width: 0px !important; 
-        flex: 1 1 0% !important; 
+
+    /* ГЛАВНЫЙ ФИКС ДЛЯ МОБИЛОК: Колонки в ряд */
+    [data-testid="stHorizontalBlock"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: flex-end !important;
     }}
 
-    /* МОБИЛЬНАЯ ВЕРСИЯ: адаптивная сетка */
+    /* Управление шириной колонок (Ширина, Высота, Шаг) */
+    [data-testid="column"] {{
+        flex: 1 1 20% !important; /* Даем колонкам расти в ряд */
+        min-width: 80px !important; /* Минимальная ширина, чтобы не схлопнулись */
+        margin-bottom: 0px !important;
+    }}
+
+    /* Четвертая колонка (Слайдер) на мобильных прыгнет вниз и будет широкой */
     @media (max-width: 640px) {{
-        [data-testid="column"] {{
-            flex: 1 1 45% !important; /* По 2 инпута в ряд (Ширина и Высота) */
-            min-width: 140px !important;
-            margin-bottom: 10px;
-        }}
-        
-        /* Четвертая колонка (слайдер Лого %) на всю ширину */
         [data-testid="column"]:nth-of-type(4) {{
             flex: 1 1 100% !important;
+            margin-top: 15px !important;
         }}
     }}
 
@@ -103,7 +107,6 @@ st.markdown(f"""
 
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
-    
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
     @media (max-width: 768px) {{
@@ -140,10 +143,11 @@ logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
+# Колонки
 c1, c2, c3, c4 = st.columns([1, 1, 1, 1.8])
-with c1: w_mm = st.number_input("Ширина", 0, value=0, on_change=reset_zip)
-with c2: h_mm = st.number_input("Высота", 0, value=0, on_change=reset_zip)
-with c3: pitch_str = st.text_input("Шаг", value="0", on_change=reset_zip)
+with c1: w_mm = st.number_input("Ширина", 0, value=0, key="w", on_change=reset_zip)
+with c2: h_mm = st.number_input("Высота", 0, value=0, key="h", on_change=reset_zip)
+with c3: pitch_str = st.text_input("Шаг", value="0", key="p", on_change=reset_zip)
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -175,7 +179,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             </div>
         ''', unsafe_allow_html=True)
 
-# ====================== БЛОК КНОПОК ======================
+# Кнопки
 st.markdown("<br>", unsafe_allow_html=True)
 action_placeholder = st.empty()
 
