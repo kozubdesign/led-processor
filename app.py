@@ -12,51 +12,75 @@ SOURCE_FOLDER = "images"
 # 1. Настройка страницы
 st.set_page_config(page_title="LED Processor", layout="centered")
 
-# CSS для исправления "срезанного" текста и центрирования всего контента
+# Ультимативный CSS для центровки всего интерфейса
 st.markdown("""
     <style>
-    /* Безопасный отступ сверху, чтобы текст не обрезался */
+    /* 1. Общие отступы страницы */
     .block-container { 
         padding-top: 2rem !important; 
         padding-bottom: 0rem !important;
+        max-width: 800px; /* Ограничиваем ширину для лучшей центровки */
     }
     
-    /* Заголовок: убрали отрицательный margin, добавили высоту строки */
+    /* 2. Центровка заголовка */
     h1 { 
-        margin-top: 0rem !important; 
-        padding-top: 0rem !important;
-        text-align: center; 
+        text-align: center !important; 
         font-size: 2.2rem !important;
         line-height: 1.3 !important;
+        margin-bottom: 1.5rem !important;
     }
     
-    /* Центрирование всех подписей и текстов */
-    .stMarkdown, .stCaption, .stText, label {
+    /* 3. Центровка всех текстов, меток (label) и подписей */
+    .stMarkdown, .stCaption, .stText, label, p {
         text-align: center !important;
-        display: block !important;
+        justify-content: center !important;
+        display: flex !important;
+        width: 100% !important;
     }
     
-    /* Центрирование полей ввода */
-    [data-testid="stNumberInput"] {
-        margin: 0 auto;
-        width: 100%;
+    /* 4. Центровка полей ввода (Number Input) */
+    div[data-testid="stNumberInput"] {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        width: 100% !important;
+    }
+    
+    /* Центрируем само поле внутри контейнера */
+    div[data-testid="stNumberInput"] > div {
+        margin: 0 auto !important;
     }
 
-    /* Стили зеленой кнопки */
+    /* 5. Центровка и стиль зеленой кнопки */
+    div.stButton {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
     div.stButton > button:first-child {
         background-color: #28a745 !important;
         color: white !important;
         height: 3.5rem !important;
         font-weight: bold !important;
-        width: 100% !important;
+        padding: 0 2rem !important;
+        width: auto !important; /* Кнопка будет по ширине текста, но в центре */
+        min-width: 250px !important;
         border: none;
         margin-top: 1rem;
     }
     
-    /* Центрирование контейнера изображения */
+    /* 6. Центровка контейнера превью */
     [data-testid="stImage"] {
+        display: flex !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+    }
+
+    /* Убираем стандартные колонки Streamlit, если они мешают на мобильных */
+    [data-testid="column"] {
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        align-items: center;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -74,7 +98,6 @@ def process_single_image(bg_path, logo_path, tw, th):
         img = img.resize((nw, nh), Image.Resampling.LANCZOS)
         img = img.crop(((nw - tw) / 2, (nh - th) / 2, (nw + tw) / 2, (nh + th) / 2))
 
-        # Расчет лого (45% от высоты или ширины)
         h_limit, w_limit = int(th * 0.45), int(tw * 0.45)
         lw_h = int(h_limit * (logo.width / logo.height))
         lh_w = int(w_limit * (logo.height / logo.width))
@@ -88,11 +111,11 @@ def process_single_image(bg_path, logo_path, tw, th):
 
 # --- ИНТЕРФЕЙС ---
 
-# 1. Блок превью (в самом верху под заголовком)
+# Место для превью
 preview_placeholder = st.empty()
 
-# 2. Блок параметров (центрированная колонка)
-_, central_col, _ = st.columns([0.4, 1, 0.4])
+# Параметры в одной центральной колонке (используем узкую колонку для фокуса)
+_, central_col, _ = st.columns([0.6, 1, 0.6])
 
 with central_col:
     st.write("")
@@ -110,7 +133,7 @@ with central_col:
     st.write("")
     process_btn = st.button("Скачать архив с контентом")
 
-# Отрисовка превью с ограничением 800x300
+# Отрисовка превью
 with preview_placeholder:
     if fields_filled:
         if os.path.exists(SOURCE_FOLDER) and os.path.exists(LOGO_PATH):
@@ -118,18 +141,17 @@ with preview_placeholder:
             if bg_files:
                 img_preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), LOGO_PATH, tw, th)
                 if img_preview:
-                    # Масштабирование для вписывания в 800x300
                     scale = min(800 / tw, 300 / th, 1.0)
                     disp_w = int(tw * scale)
                     st.image(img_preview, width=disp_w)
             else:
                 st.warning("Папка 'images' пуста")
     else:
-        st.info("Введите параметры экрана для предпросмотра")
+        st.info("Введите параметры экрана")
 
-# --- ЛОГИКА СКАЧИВАНИЯ ---
+# --- СБОРКА ZIP ---
 if process_btn and fields_filled:
-    with st.spinner('Генерация архива...'):
+    with st.spinner('Сборка...'):
         bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -140,11 +162,12 @@ if process_btn and fields_filled:
                     res.save(buf, format='JPEG', quality=95)
                     zip_file.writestr(f"{tw}x{th}_{i+1}.jpg", buf.getvalue())
 
+        # Кнопка скачивания внутри центральной колонки
         with central_col:
             st.download_button(
                 label="✅ СОХРАНИТЬ ZIP-АРХИВ",
                 data=zip_buffer.getvalue(),
-                file_name=f"LED_Content_{tw}x{th}.zip",
+                file_name=f"LED_{tw}x{th}.zip",
                 mime="application/zip",
                 use_container_width=True
             )
