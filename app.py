@@ -43,26 +43,49 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-st.set_page_config(page_title="LED Generator", layout="wide", page_icon="favicon.png")
+st.set_page_config(page_title="LED Generator", layout="wide")
 
-logo_black_base64 = get_base64_img("logo.png")   # исправлено
+logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    [data-testid="stInputInstructions"] {{ display: none !important; }}
-   
-    .logo-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
+    
+    /* ФИКС СЛАЙДЕРА: ЗЕЛЕНЫЙ СЛЕВА, СЕРЫЙ СПРАВА */
+    
+    /* Общий фон полоски (справа от ползунка) */
+    .stSlider [data-baseweb="slider"] > div {{
+        background: #eeeeee !important;
     }}
-   
+
+    /* Активная часть (слева от ползунка) */
+    .stSlider [data-baseweb="slider"] > div > div > div {{
+        background: #28a745 !important;
+    }}
+
+    /* Убираем красную точку в самом начале */
+    .stSlider [data-baseweb="slider"] > div::before {{
+        background-color: #28a745 !important;
+    }}
+
+    /* Сам ползунок (кружок) */
+    .stSlider [data-baseweb="slider"] div[role="slider"] {{
+        background-color: #28a745 !important;
+        border: none !important;
+    }}
+
+    /* Число над ползунком */
+    .stSlider div[data-testid="stThumbValue"] {{
+        color: #28a745 !important;
+    }}
+
+    /* Остальные стили */
+    [data-testid="stInputInstructions"] {{ display: none !important; }}
+    .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
-   
+    
     @media (prefers-color-scheme: light) {{
         .logo-dark {{ display: none; }}
         .logo-light {{ display: block; }}
@@ -71,32 +94,26 @@ st.markdown(f"""
         .logo-light {{ display: none; }}
         .logo-dark {{ display: block; }}
     }}
-   
-    @media (max-width: 640px) {{
-        .logo-img {{ width: 100px; }}
-    }}
+    
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     .stNumberInput, .stSlider {{ width: 100% !important; }}
-    [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{
-        display: flex !important; justify-content: center !important; width: 100% !important;
-    }}
+    
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
+        border: none !important;
     }}
-    .res-box {{
-        width: 100%; box-sizing: border-box;
-        text-align: center; background-color: #d4edda; color: #155724;
+    .res-box {{ 
+        text-align: center; background-color: #d4edda; color: #155724; 
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
     }}
     </style>
-   
+    
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
     </div>
-    <div class='main-title'>Генератор контента</div>
+    <div class='main-title'>LED Content Generator</div>
     """, unsafe_allow_html=True)
 
 # ====================== ЛОГИКА ======================
@@ -108,8 +125,7 @@ resolution_placeholder = st.empty()
 
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
-
-bg_files = [os.path.join("images", f) for f in os.listdir("images")
+bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
 c1, c2, c3 = st.columns(3)
@@ -154,13 +170,3 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
             for f in bg_files:
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
                 if processed:
-                    img_byte_arr = io.BytesIO()
-                    processed.save(img_byte_arr, format='JPEG', quality=95)
-                    zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-        st.session_state.zip_ready = zip_buffer.getvalue()
-        st.session_state.processing = False
-        st.rerun()
-    else:
-        if btn_placeholder.button("Генераровать"):
-            st.session_state.processing = True
-            st.rerun()
