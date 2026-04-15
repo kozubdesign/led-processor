@@ -173,8 +173,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
         btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
-elif st.session_state.processing:
-        # Используем анимированный эмодзи песочных часов или крутящийся символ
+    elif st.session_state.processing:
         btn_placeholder.button("🔄 Идет генерация... подождите", disabled=True)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -187,6 +186,10 @@ elif st.session_state.processing:
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
+    else:
+        if btn_placeholder.button("Создать контент"):
+            st.session_state.processing = True
+            st.rerun()
     else:
         if btn_placeholder.button("Создать контент"):
             st.session_state.processing = True
