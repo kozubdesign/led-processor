@@ -3,7 +3,7 @@ import zipfile
 import io
 import os
 import base64
-from PIL import Image
+from PIL import Image, ImageOps  # Добавлен ImageOps
 from datetime import datetime
 
 # ====================== КОНСТАНТЫ ======================
@@ -40,51 +40,38 @@ resolution_placeholder = st.empty()
 @st.cache_resource
 def get_cached_logo(path):
     if os.path.exists(path):
-        try: return Image.open(path).convert("RGBA")
-        except: return None
+        try:
+            return Image.open(path).convert("RGBA")
+        except Exception as e:
+            st.error(f"Ошибка логотипа: {e}")
+            return None
     return None
 
 def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     try:
         with Image.open(bg_path) as img:
-            img = img.convert("RGB")
-            
-            # 1. Подготовка фона
-            img_aspect = img.width / img.height
-            target_aspect = tw / th
-            if img_aspect > target_aspect:
-                new_height = th
-                new_width = int(th * img_aspect)
-            else:
-                new_width = tw
-                new_height = int(tw / img_aspect)
-            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            left = (new_width - tw) / 2
-            top = (new_height - th) / 2
-            img = img.crop((left, top, left + tw, top + th))
+            # 1. Подготовка фона (Center Crop + Resize одним методом)
+            img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
 
-            # 2. ЛОГИКА РАЗМЕРА ЛОГОТИПА
+            # 2. Логика размера логотипа
             lw, lh = logo_rgba.size
-            l_aspect = lw / lh
             
-            if tw >= th:
-                # Ширина больше высоты -> 50% от ВЫСОТЫ
-                target_logo_h = (th * 0.50) * (user_scale_percent / 100)
-                new_lh = int(target_logo_h)
-                new_lw = int(target_logo_h * l_aspect)
-            else:
-                # Высота больше ширины -> 50% от ШИРИНЫ
-                target_logo_w = (tw * 0.50) * (user_scale_percent / 100)
-                new_lw = int(target_logo_w)
-                new_lh = int(target_logo_w / l_aspect)
+            # Правило: 65% ширины или 30% высоты (выбираем то, что меньше)
+            scale_factor = min((tw * 0.65) / lw, (th * 0.30) / lh)
             
-            new_lw, new_lh = max(1, new_lw), max(1, new_lh)
+            # Применяем пользовательский ползунок к базовому правилу
+            final_scale = scale_factor * (user_scale_percent / 100)
+            
+            new_lw = max(1, int(lw * final_scale))
+            new_lh = max(1, int(lh * final_scale))
+            
             logo_res = logo_rgba.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
 
             # 3. Наложение по центру
             img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
             return img
-    except: return None
+    except Exception as e:
+        return None
 
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
@@ -99,11 +86,13 @@ with c4: logo_scale = st.slider("Размер лого (%)", 0, 200, 100)
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
+    
     if logo_img and bg_files:
+        # Генерируем превью
         preview = process_single_image(bg_files[0], logo_img, tw, th, logo_scale)
         if preview:
             buf = io.BytesIO()
-            preview.save(buf, format="JPEG", quality=90)
+            preview.save(buf, format="JPEG", quality=85) # 85 достаточно для превью
             img_str = base64.b64encode(buf.getvalue()).decode()
             preview_placeholder.markdown(f'''
                 <div style="display: flex; justify-content: center; margin-bottom: 10px;">
@@ -117,10 +106,12 @@ button_placeholder = st.empty()
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     if button_placeholder.button("Создать контент"):
-        button_placeholder.empty()
+        # Убираем кнопку сразу после нажатия, чтобы избежать повторных кликов
+        btn_container = button_placeholder.empty() 
+        
         with st.spinner("Создание контента..."):
             zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for f in bg_files:
                     processed = process_single_image(f, logo_img, tw, th, logo_scale)
                     if processed:
