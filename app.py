@@ -48,31 +48,42 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     try:
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
-            # 1. Ресайз и кроп фона
-            ir, tr = img.width / img.height, tw / th
-            nw, nh = (tw, int(tw / ir)) if ir < tr else (int(th * ir), th)
-            img = img.resize((nw, nh), Image.Resampling.LANCZOS)
-            img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
             
-            # 2. НОВАЯ ЛОГИКА РАЗМЕРА ЛОГОТИПА
-            # Ориентируемся на меньшую сторону (50% от неё)
-            if tw > th:
-                base_limit = th * 0.50  # Горизонтальный экран — 50% от высоты
+            # 1. Подготовка фона (ресайз и кроп)
+            img_aspect = img.width / img.height
+            target_aspect = tw / th
+            if img_aspect > target_aspect:
+                new_height = th
+                new_width = int(th * img_aspect)
             else:
-                base_limit = tw * 0.50  # Вертикальный/квадратный — 50% от ширины
-            
-            # Корректировка бегунком
-            final_pixel_size = base_limit * (user_scale_percent / 100)
-            
-            # 3. Ресайз логотипа
+                new_width = tw
+                new_height = int(tw / img_aspect)
+            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            left = (new_width - tw) / 2
+            top = (new_height - th) / 2
+            img = img.crop((left, top, left + tw, top + th))
+
+            # 2. РАСЧЕТ РАЗМЕРА ЛОГОТИПА ПО ПРАВИЛУ
             lw, lh = logo_rgba.size
-            scale = final_pixel_size / max(lw, lh)
-            new_lw, new_lh = int(lw * scale), int(lh * scale)
+            l_aspect = lw / lh
             
+            # ОПРЕДЕЛЯЕМ ПО КАКОЙ СТОРОНЕ РАБОТАЕМ
+            if tw >= th:
+                # Горизонтальный экран (или квадрат) -> 50% от ВЫСОТЫ
+                target_logo_h = (th * 0.50) * (user_scale_percent / 100)
+                new_lh = int(target_logo_h)
+                new_lw = int(target_logo_h * l_aspect)
+            else:
+                # Вертикальный экран -> 50% от ШИРИНЫ
+                target_logo_w = (tw * 0.50) * (user_scale_percent / 100)
+                new_lw = int(target_logo_w)
+                new_lh = int(target_logo_w / l_aspect)
+            
+            # Защита от нулевых размеров
             new_lw, new_lh = max(1, new_lw), max(1, new_lh)
             logo_res = logo_rgba.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
-            
-            # 4. Вставка по центру
+
+            # 3. Наложение по центру
             img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
             return img
     except: return None
@@ -83,12 +94,12 @@ bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER)
 
 st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=8000)
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=6000)
+with c3: pitch = st.number_input("Шаг (мм)", 1, value=10)
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 200, 100)
 
-if w_mm > 0 and h_mm > 0 and pitch > 0:
+if w_mm > 0 and h_mm > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     if logo_img and bg_files:
         preview = process_single_image(bg_files[0], logo_img, tw, th, logo_scale)
@@ -106,7 +117,7 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
 st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
 
-if w_mm > 0 and h_mm > 0 and pitch > 0:
+if w_mm > 0 and h_mm > 0:
     if button_placeholder.button("Создать контент"):
         button_placeholder.empty()
         with st.spinner("Создание контента..."):
