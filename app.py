@@ -116,8 +116,8 @@ st.markdown(f"""
     
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
-        padding: 10px; border-radius: 8px; margin: 15px 0; 
-        font-weight: 500; font-size: 1.0rem;
+        padding: 8px; border-radius: 8px; margin: 8px 0; 
+        font-weight: 400; font-size: 0.8rem;
     }}
     </style>
     <div class="logo-container">
