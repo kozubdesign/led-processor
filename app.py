@@ -74,6 +74,15 @@ st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
+    
+    /* Исправление ширины полей ввода для мобильных */
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"] {{
+        min-width: 100px !important;
+    }}
+    .stNumberInput, .stTextInput {{
+        width: 100% !important;
+    }}
+
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
@@ -98,10 +107,11 @@ st.markdown(f"""
         width: 320px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important;
     }}
     
+    /* Размер шрифта разрешения */
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
-        padding: 10px; border-radius: 8px; margin: 15px 0; 
-        font-weight: 500; font-size: 1.0rem;
+        padding: 20px; border-radius: 8px; margin: 15px 0; 
+        font-weight: 500; font-size: 1.4rem;
     }}
     </style>
     <div class="logo-container">
@@ -122,6 +132,7 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
+# Сетка ввода
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip)
@@ -153,7 +164,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #ddd;">
+                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
         ''', unsafe_allow_html=True)
         res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
