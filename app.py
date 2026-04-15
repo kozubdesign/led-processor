@@ -80,13 +80,19 @@ st.markdown(f"""
     .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* СТИЛИ ДЛЯ КОЛОНОК (чтобы стояли в ряд) */
     [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
     div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
 
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
     
+    /* СТИЛИ ПРЕВЬЮ */
+    .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
+    
+    @media (max-width: 768px) {{
+        .preview-img {{ max-height: 200px !important; }}
+    }}
+
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
         content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 10px;
@@ -120,11 +126,10 @@ logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# РЯД ИЗ 4 ЭЛЕМЕНТОВ
-c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip)
-with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_zip)
+c1, c2, c3, c4 = st.columns([1, 1, 1, 1.8])
+with c1: w_mm = st.number_input("Ширина", 0, value=0, on_change=reset_zip)
+with c2: h_mm = st.number_input("Высота", 0, value=0, on_change=reset_zip)
+with c3: pitch_str = st.text_input("Шаг", value="0", on_change=reset_zip)
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -142,7 +147,7 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 with c4:
     default_scale = 50 if tw >= th else 40
-    logo_scale = st.slider("Лого (%)", 0, 100, default_scale, on_change=reset_zip)
+    logo_scale = st.slider("Лого %", 0, 100, default_scale, on_change=reset_zip)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
@@ -152,7 +157,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd;">
+                <img class="preview-img" src="data:image/jpeg;base64,{img_str}">
             </div>
         ''', unsafe_allow_html=True)
         res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
