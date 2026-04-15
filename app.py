@@ -54,6 +54,9 @@ st.set_page_config(page_title="LEDsi Генератор контента", layou
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
 
+#SVG Иконка Спиннера (белая) в Base64
+spinner_svg_base64 = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTI4OCA5NkMyODggNjQuNjkgMzEzLjQgMzguNjIgMzQ0IDM4LjYyQzM3NC42IDM4LjYyIDQwMCA2NC42OSA0MDAgOTZDMDAgMTI3LjMgMzc0LjYgMTUzLjQgMzQ0IDE1My40QzMxMy40IDE1My40IDI4OCAxMjcuMyAyODggOTZ6TTQ4MCAyNTZDMzgwIDM4MC4zIDMxNi42IDQ4MCAyNTYgNDgwQzE5NS40IDQ4MCAxMzIgMzgwLjMgMTMyIDI1NkMxMzIgMTMxLjcgMTk1LjQgOTYgMjU2IDk2QzMxNi42IDk2IDQ4MCAxMzEuNyA0ODAgMjU2ek0yNTYgMTI4QzE5NS40IDEyOCAxMzIgMTk1LjQgMTMyIDI1NkMxMzIgMzE2LjYgMTk1LjQgNDgwIDI1NiA0ODBDMzE2LjYgNDgwIDQ4MCAzMTYuNiA0ODAgMjU2QzQ4MCAxOTUuNCAzMTYuNiAxMjggMjU2IDEyOHpNMTEyIDk2QzExMiAxMjcuMyA4Ny4zOCAxNTMuNCA1Ni43NSAxNTMuNEMyNi4xMyAxNTMuNCAxLjUgMTI3LjMgMS41IDk2QzEuNSA2NC42OSAyNi4xMyAzOC42MiA1Ni43NSAzOC42MkMxMTIgMzguNjIgMTEyIDY0LjY5IDExMiA5NnpNMjU2IDQxNkMyMjQuNiA0MTYgMTk4LjYgNDQxLjQgMTk4LjYgNDcyQzE5OC42IDUwMi42IDIyNC42IDUyOCAyNTYgNTI4QzI4Ny40IDUyOCAzMTMuNCA1MDIuNiAzMTMuNCA0NzJDMzEzLjQgNDQxLjQgMjg3LjQgNDE2IDI1NiA0MTZ6TTQ0OCA0MTZDMTE2LjYgNDE2IDM5MC42IDQ0MS40IDM5MC42IDQ3MkMzOTAuNiA1MDIuNiA0MTYuNiA1MjggNDQ4IDUyOEM0NzkuNCA1MjggNTA1LjQgNTAyLjYgNTA1LjQgNDcyQzUwNS40IDQ0MS40IDQ3OS40IDQxNiA0NDggNDE2ek01Ni43NSA0MTZDMjYuMTMgNDE2IDEuNSA0NDEuNCAxLjUgNDcyQzEuNSA1MDIuNiAyNi4xMyA1MjggNTYuNzUgNTI4Qzg3LjM4IDUyOCA4Ny4zOCA1MDIuNiA4Ny4zOCA0NzJDODcuMzggNDQxLjQgODcuMzggNDE2IDU2Ljc1IDQxNnpNNDE2IDk2QzQxNiAxMjcuMyAzOTAuNiAxNTMuNCAzNjAgMTUzLjRDMzI5LjQgMTUzLjQgMzA0IDEyNy4zIDMwNCA5NkMzMDQgNjQuNjkgMzI5LjQgMzguNjIgMzYwLDM4LjYyQzQxNiAzOC42MiA0MTYgNjQuNjkgNDE2IDk2ek0xMTIgMjU2QzExMiAyODcuNCA4Ny4zOCAzMTMuNCA1Ni43NSAzMTMuNEMyNi4xMyAzMTMuNCAxLjUgMjg3LjQgMS41IDI1NkMxLjUgMjI0LjYgMjYuMTMgMTk4LjYgNTYuNzUgMTk4LjZDMTEyIDE5OC42IDExMiAyMjQuNiAxMTIgMjU2ek01MDcuNSA5NkM1MDcuNSAxMjcuMyA0ODIuOSAxNTMuNCA0NTIuMyAxNTMuNEM0MjEuNiAxNTMuNCAzOTcgMTI3LjMgMzk3IDk2QzM5NyA2NC42OSA0MjEuNiAzOC42MiA0NTIuMyAzOC42MkM0ODIuOSAzOC42MiA1MDcuNSA2NC42OSA1MDcuNSA5NnpNNDQ4IDMzNkM0NDggMzY3LjQgNDE2LjYgMzkzLjQgMzg2IDM5My40QzM1NS40IDM5My40IDMyOS40IDM2Ny40IDMyOS40IDMzNkMzMjkuNCAzMDQuNiAzNTUuNCAyNzguNiAzODYgMjc4LjZDMzgwIDI3OC42IDM4MCAzMDQuNiA0NDggMzM2ek00NTIuMyAyNTZDMzgzLjUgMjU2IDMyOC45IDI4Ny40IDMyOC45IDMxOC4zQzMyOC45IDM0OS4xIDM4My41IDM4MC41IDQ1Mi4zIDM4MC41QzUxMiAzODAuNSA1MTEuNSAzNDkuMSA1MTEuNSAzMTguM0M1MTEuNSAyODcuNCA1MTIgMjU2IDQ1Mi4zIDI1NnpNMTEyIDMzNkMxMTIgMzY3LjQgODcuMzggMzkzLjQgNTYuNzUgMzkzLjRDMjYuMTMgMzkzLjQgMS41IDM2Ny40IDEuNSAzMzZDMS41IDMwNC42IDI2LjEzIDI3OC42IDU2Ljc1IDI3OC42Qzg3LjM4IDI3OC42IDg3LjM4IDMwNC42IDExMiAzMzZ6Ii8+PC9zdmc+"
+
 st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
@@ -75,12 +78,18 @@ st.markdown(f"""
         to {{ transform: rotate(360deg); }}
     }}
 
-    /* Применяем анимацию к иконке внутри заблокированной кнопки */
+    /* Заменяем эмодзи на SVG-спиннер (через Base64) для заблокированной кнопки */
     button[disabled] p::before {{
-        content: "🔄";
+        content: "";
         display: inline-block;
-        margin-right: 10px;
-        animation: spin 2s linear infinite;
+        width: 20px;
+        height: 20px;
+        margin-right: 12px;
+        background-image: url("{spinner_svg_base64}");
+        background-size: contain;
+        background-repeat: no-repeat;
+        vertical-align: middle;
+        animation: spin 1.5s linear infinite; /* Чуть быстрее и плавнее */
     }}
 
     @media (prefers-color-scheme: light) {{
@@ -178,7 +187,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         zip_filename = f"{tw}x{th}_{current_date}.zip"
         btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
     elif st.session_state.processing:
-        # Текст внутри кнопки пустой, так как иконка и текст теперь управляются через CSS выше
+        # Текст остается, иконка подставляется CSS-ом
         btn_placeholder.button("Идет генерация...", disabled=True)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
