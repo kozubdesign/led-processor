@@ -194,3 +194,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         if btn_placeholder.button("Создать контент"):
             st.session_state.processing = True
             st.rerun()
+    else:
+        if btn_placeholder.button("Создать контент"):
+            st.session_state.processing = True
+            st.rerun()
