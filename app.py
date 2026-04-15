@@ -53,27 +53,29 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
+    /* Убираем подсказки "Press Enter to apply" */
+    [data-testid="stInputInstructions"] {{
+        display: none !important;
+    }}
+    
     .logo-container {{
         display: flex;
         justify-content: center;
-        margin-bottom: 10px;
+        margin-top: 20px;
+        margin-bottom: 20px;
     }}
     
-    /* Размеры логотипа (уменьшены в 2 раза) */
     .logo-img {{ width: 150px; }}
     
-    /* Светлая тема */
     @media (prefers-color-scheme: light) {{
         .logo-dark {{ display: none; }}
         .logo-light {{ display: block; }}
     }}
-    /* Темная тема */
     @media (prefers-color-scheme: dark) {{
         .logo-light {{ display: none; }}
         .logo-dark {{ display: block; }}
     }}
     
-    /* Мобильная версия (уменьшено в 2 раза) */
     @media (max-width: 640px) {{
         .logo-img {{ width: 100px; }}
     }}
