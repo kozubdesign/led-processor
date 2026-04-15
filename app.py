@@ -13,44 +13,46 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# МАКСИМАЛЬНО ЖЕСТКИЙ CSS ДЛЯ ЦЕНТРИРОВАНИЯ
+# ФИНАЛЬНЫЙ CSS (Центрирование через глубокие селекторы)
 st.markdown("""
     <style>
-    /* Ограничение ширины основного контейнера */
     .block-container {
         max-width: 800px !important;
         margin: 0 auto !important;
         padding-top: 2rem !important;
     }
 
-    /* Заголовок по центру */
-    h1 { text-align: center !important; margin-bottom: 2rem !important; }
+    h1 { text-align: center !important; margin-bottom: 20px !important; }
 
-    /* Центрирование плашки разрешения */
-    div[data-testid="stNotification"] {
-        max-width: 600px !important;
-        margin: 0 auto !important;
-    }
-    div[data-testid="stNotification"] div[role="alert"] {
-        justify-content: center !important;
-    }
-
-    /* Центрирование кнопок Генерировать и Скачать */
-    .stButton, div[data-testid="stDownloadButton"] {
+    /* Центрирование контейнеров кнопок и самих кнопок */
+    div.stButton, div.stDownloadButton, div.element-container:has(button) {
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
-        margin-top: 20px !important;
     }
 
-    .stButton > button, div[data-testid="stDownloadButton"] > button {
-        width: 300px !important;
-        height: 52px !important;
+    .stButton > button, .stDownloadButton > button {
+        width: 320px !important;
+        height: 54px !important;
         background-color: #28a745 !important;
         color: white !important;
         font-weight: 600 !important;
         border-radius: 8px !important;
         border: none !important;
+        transition: background 0.3s;
+    }
+    
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        background-color: #218838 !important;
+    }
+
+    /* Плашка разрешения */
+    div[data-testid="stNotification"] {
+        max-width: 600px !important;
+        margin: 10px auto !important;
+    }
+    div[data-testid="stNotification"] div[role="alert"] {
+        justify-content: center !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -66,13 +68,11 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
     try:
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
-            # Ресайз фона
             ir, tr = img.width / img.height, tw / th
             nw, nh = (tw, int(tw / ir)) if ir < tr else (int(th * ir), th)
             img = img.resize((nw, nh), Image.Resampling.LANCZOS)
             img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
             
-            # Ресайз лого
             limit = int(min(tw, th) * (logo_percent / 100))
             lw, lh = logo_rgba.size
             scale = limit / max(lw, lh)
@@ -83,14 +83,13 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
             return img
     except: return None
 
-# ====================== ЛОГИКА ======================
+# ====================== ИНТЕРФЕЙС ======================
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# Ввод данных
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
 with col_w: w_mm = st.number_input("Ширина (мм)", 0, step=10)
 with col_h: h_mm = st.number_input("Высота (мм)", 0, step=10)
@@ -108,17 +107,18 @@ if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
         img_str = base64.b64encode(buf.getvalue()).decode()
         st.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 4px; border: 1px solid #ddd;">
             </div>
         ''', unsafe_allow_html=True)
     
     st.success(f"**Разрешение: {tw} × {th} px**")
 
-    # Управление состоянием архива в session_state для корректного отображения кнопок
+    # Состояние
     if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 
+    # Кнопки (вне колонок для центрирования)
     if st.button("Генерировать контент"):
-        with st.spinner("Сборка архива..."):
+        with st.spinner("Сборка..."):
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                 for i, path in enumerate(bg_files):
@@ -138,5 +138,5 @@ if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
             mime="application/zip"
         )
 else:
-    if not bg_files: st.error(f"Папка '{SOURCE_FOLDER}' пуста или не найдена.")
-    if not logo_img: st.error(f"Файл '{LOGO_PATH}' не найден.")
+    if not bg_files: st.error("Нет изображений в папке images")
+    if not logo_img: st.error("Файл logo.png не найден")
