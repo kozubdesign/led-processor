@@ -17,7 +17,7 @@ if os.path.exists(FAVICON_PATH):
 else:
     st.set_page_config(page_title="LED Processor", layout="centered")
 
-# ====================== CSS — ЖЁСТКАЯ ЦЕНТРОВКА ======================
+# ====================== ЖЁСТКИЙ CSS ======================
 st.markdown("""
     <style>
     .block-container {
@@ -26,10 +26,10 @@ st.markdown("""
         padding-top: 2rem !important;
     }
 
-    /* Логотип по центру */
+    /* Логотип — строго по центру */
     .main-logo {
         display: block !important;
-        margin: 0 auto 25px auto !important;
+        margin: 0 auto 30px auto !important;
         height: 68px;
         object-fit: contain;
     }
@@ -69,7 +69,7 @@ st.markdown("""
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
-        margin-top: 15px !important;
+        margin: 10px 0 20px 0 !important;
     }
     .stButton > button {
         background-color: #28a745 !important;
@@ -78,7 +78,7 @@ st.markdown("""
         font-size: 1.12rem !important;
         height: 54px !important;
         min-width: 320px !important;
-        padding: 0 50px !important;
+        padding: 0 55px !important;
         border-radius: 8px !important;
     }
 
@@ -95,7 +95,7 @@ is_dark = st.get_option("theme.base") == "dark"
 header_logo = LOGO_PATH if is_dark else LOGO_BLACK_PATH
 
 if os.path.exists(header_logo):
-    st.image(header_logo, use_container_width=False, width=180, clamp=True)
+    st.image(header_logo, use_container_width=False, width=190)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
