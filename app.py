@@ -169,7 +169,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
             <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid #ddd;">
+                <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
         ''', unsafe_allow_html=True)
         res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
