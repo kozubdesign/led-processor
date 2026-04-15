@@ -79,7 +79,26 @@ st.markdown(f"""
     .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
+    /* Десктопная версия: колонки в ряд */
+    [data-testid="column"] {{ 
+        min-width: 0px !important; 
+        flex: 1 1 0% !important; 
+    }}
+
+    /* МОБИЛЬНАЯ ВЕРСИЯ: адаптивная сетка */
+    @media (max-width: 640px) {{
+        [data-testid="column"] {{
+            flex: 1 1 45% !important; /* По 2 инпута в ряд (Ширина и Высота) */
+            min-width: 140px !important;
+            margin-bottom: 10px;
+        }}
+        
+        /* Четвертая колонка (слайдер Лого %) на всю ширину */
+        [data-testid="column"]:nth-of-type(4) {{
+            flex: 1 1 100% !important;
+        }}
+    }}
+
     div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
 
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
