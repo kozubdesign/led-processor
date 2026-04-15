@@ -17,7 +17,7 @@ if os.path.exists(FAVICON_PATH):
 else:
     st.set_page_config(page_title="LED Processor", layout="centered")
 
-# ====================== ЖЁСТКИЙ CSS ======================
+# ====================== CSS ======================
 st.markdown("""
     <style>
     .block-container {
@@ -26,16 +26,11 @@ st.markdown("""
         padding-top: 2rem !important;
     }
 
-    /* Контейнер для логотипа - центрирование */
-    div[data-testid="stImage"] {
-        text-align: center !important;
-        display: block !important;
-    }
-    
+    /* Логотип - уменьшен в 2 раза по высоте (было 68px, стало 34px) */
     div[data-testid="stImage"] img {
         margin: 0 auto 30px auto !important;
-        height: 68px;
-        width: auto;
+        height: 34px !important;
+        width: auto !important;
         display: block !important;
     }
 
@@ -58,13 +53,18 @@ st.markdown("""
         margin: 30px 0 22px 0;
     }
 
-    /* Поля ввода по центру */
+    /* Поля ввода по центру с фиксированной шириной */
     div[data-testid="stNumberInput"] {
         margin: 0 auto 16px auto !important;
         max-width: 380px !important;
+        width: 380px !important;
+    }
+    
+    div[data-testid="stNumberInput"] input {
+        text-align: left !important;
     }
 
-    /* Кнопка - правильное центрирование */
+    /* Кнопка такой же ширины как поля ввода */
     .stButton {
         display: flex !important;
         justify-content: center !important;
@@ -78,16 +78,27 @@ st.markdown("""
         font-weight: 600 !important;
         font-size: 1.12rem !important;
         height: 54px !important;
-        min-width: 320px !important;
-        padding: 0 55px !important;
+        width: 380px !important;
+        min-width: 380px !important;
+        padding: 0 20px !important;
         border-radius: 8px !important;
         margin: 0 auto !important;
     }
     
-    /* Обёртка кнопки */
-    .element-container:has(.stButton) {
+    /* Превью - сохраняем пропорции без искажения */
+    .preview-image {
         display: flex !important;
         justify-content: center !important;
+        margin: 35px auto !important;
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .preview-image img {
+        max-width: 100%;
+        height: auto !important;
+        width: auto !important;
+        object-fit: contain;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -97,10 +108,9 @@ is_dark = st.get_option("theme.base") == "dark"
 header_logo = LOGO_PATH if is_dark else LOGO_BLACK_PATH
 
 if os.path.exists(header_logo):
-    # Используем колонки для центрирования
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image(header_logo, width=190)
+        st.image(header_logo, width=None)  # width=None чтобы CSS контролировал размер
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
@@ -173,21 +183,22 @@ st.markdown('<p class="params-title">Параметры экрана</p>', unsaf
 w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 
+# Шаг пикселя - только целые числа, без дробной части
 pitch = st.number_input("Шаг пикселя (мм)", 
-                       min_value=0.0, 
-                       max_value=999.99999, 
-                       value=0.0, 
-                       format="%.5f", 
-                       step=0.00001)
+                       min_value=0, 
+                       max_value=999999, 
+                       value=0, 
+                       step=1,
+                       format="%d")
 
-fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.00001
+fields_filled = w_mm > 0 and h_mm > 0 and pitch > 0
 
 if fields_filled:
     tw = int(round(w_mm / pitch))
     th = int(round(h_mm / pitch))
     st.success(f"**Разрешение: {tw} × {th} px**")
 
-# ====================== ПРЕВЬЮ ======================
+# ====================== ПРЕВЬЮ (без искажения) ======================
 if fields_filled:
     logo_img = get_processing_logo()
     if logo_img:
@@ -195,14 +206,15 @@ if fields_filled:
         if bg_files:
             preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
             if preview:
-                scale = min(800 / tw, 400 / th, 1.0)
-                st.image(preview, width=int(tw * scale))
+                # Превью масштабируется без искажения, сохраняя пропорции
+                st.markdown('<div class="preview-image">', unsafe_allow_html=True)
+                st.image(preview, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
 # ====================== КНОПКА ======================
-# Используем колонки для центрирования кнопки
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    if st.button("🚀 Создать архив с контентом", type="primary", use_container_width=True):
+    if st.button("Скачать контент", type="primary", use_container_width=True):
         if fields_filled:
             logo_img = get_processing_logo()
             if logo_img:
@@ -219,17 +231,24 @@ with col2:
                                     zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", buf.getvalue())
                         zip_buffer.seek(0)
                         st.session_state.zip_data = zip_buffer.getvalue()
-                        st.session_state.file_name = f"LED_{tw}x{th}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+                        
+                        # Формируем имя архива: "Контент на экран 26 04 15"
+                        now = datetime.now()
+                        year = now.strftime("%y")
+                        month = now.strftime("%m")
+                        day = now.strftime("%d")
+                        st.session_state.file_name = f"Контент на экран {year} {month} {day}.zip"
+                        
                         st.success("✅ Архив создан!")
         else:
             st.warning("Заполните все параметры экрана")
 
-# ====================== СКАЧИВАНИЕ ======================
+# ====================== АВТОМАТИЧЕСКОЕ СКАЧИВАНИЕ ======================
 if st.session_state.zip_data is not None:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.download_button(
-            label="💾 Скачать ZIP-архив",
+            label="Скачать контент",
             data=st.session_state.zip_data,
             file_name=st.session_state.file_name,
             mime="application/zip",
