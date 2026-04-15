@@ -54,6 +54,7 @@ st.markdown("""
 
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
+# Плейсхолдеры для превью и разрешения (они не будут пропадать)
 preview_placeholder = st.empty()
 resolution_placeholder = st.empty()
 
@@ -84,17 +85,18 @@ with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%g")
 
-# Рассчитываем разрешение заранее для определения ориентации
+# Рассчитываем разрешение
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
 
-# Установка значения по умолчанию в зависимости от ориентации
+# Установка значения по умолчанию
 default_scale = 50 if tw >= th else 40
 
 with c4: 
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
+# Отображение превью (всегда активно, если введены данные)
 if tw > 0 and th > 0:
     is_hor = tw >= th
     current_logo = logo_h_img if is_hor else logo_v_img
@@ -111,26 +113,34 @@ if tw > 0 and th > 0:
                 </div>
             ''', unsafe_allow_html=True)
             resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
-    
     elif not current_logo:
         target_file = LOGO_H_PATH if is_hor else LOGO_V_PATH
         st.error(f"Файл {target_file} не найден!")
 
 st.markdown("<br>", unsafe_allow_html=True)
-button_placeholder = st.empty()
 
-if tw > 0 and th > 0:
-    if button_placeholder.button("Создать контент"):
-        button_placeholder.empty()
-        with st.spinner("Создание контента..."):
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                for f in bg_files:
-                    processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
-                    if processed:
-                        img_byte_arr = io.BytesIO()
-                        processed.save(img_byte_arr, format='JPEG', quality=95)
-                        zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-            
-            st.download_button(label="📥 Скачать контент", data=zip_buffer.getvalue(),
-                             file_name=f"led_{tw}x{th}.zip", mime="application/zip")
+# Управление кнопками
+button_container = st.empty()
+
+if tw > 0 and th > 0 and current_logo and bg_files:
+    # Состояние кнопки в зависимости от сессии
+    if button_container.button("Создать контент"):
+        # 1. Кнопка исчезает, появляется значок работы
+        with button_container:
+            with st.spinner("Создание контента..."):
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                    for f in bg_files:
+                        processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
+                        if processed:
+                            img_byte_arr = io.BytesIO()
+                            processed.save(img_byte_arr, format='JPEG', quality=95)
+                            zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+                
+                # 2. По завершении spinner исчезает, появляется кнопка скачивания
+                st.download_button(
+                    label="📥 Скачать контент", 
+                    data=zip_buffer.getvalue(),
+                    file_name=f"led_{tw}x{th}.zip", 
+                    mime="application/zip"
+                )
