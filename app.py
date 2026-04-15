@@ -9,32 +9,11 @@ from datetime import datetime
 LOGO_PATH = "logo.png"
 SOURCE_FOLDER = "images"
 
-# 1. Настройка страницы
-if os.path.exists(LOGO_PATH):
-    fav_logo = Image.open(LOGO_PATH)
-    st.set_page_config(page_title="LED Processor", page_icon=fav_logo, layout="wide")
-else:
-    st.set_page_config(page_title="LED Processor", layout="wide")
+# 1. Настройка страницы (без иконок)
+st.set_page_config(page_title="LED Processor", layout="wide")
 
-# 2. Выровненный заголовок с логотипом
-if os.path.exists(LOGO_PATH):
-    # Используем HTML/CSS для идеального выравнивания по центру высоты
-    st.markdown(
-        f"""
-        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px;">
-            <img src="data:image/png;base64,{st.image_to_base64 if hasattr(st, 'image_to_base64') else ''}" 
-            width="80" style="vertical-align: middle;"> </div>
-        """, unsafe_allow_html=True
-    )
-    # Альтернативный чистый способ Streamlit для выравнивания
-    col_l, col_r = st.columns([1, 4])
-    with col_l:
-        st.write("") # Отступ сверху для компенсации
-        st.image(LOGO_PATH, width=80)
-    with col_r:
-        st.markdown("<h1 style='margin-left: -100px;'>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
-else:
-    st.markdown("<h1 style='text-align: center;'>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
+# 2. Чистый заголовок без иконок
+st.markdown("<h1 style='text-align: center; margin-bottom: 20px;'>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 
 # --- ЛОГИКА ОБРАБОТКИ ---
 def process_single_image(bg_path, logo_path, tw, th):
@@ -94,7 +73,7 @@ with col1:
             else:
                 st.info("Введите размеры для превью")
     else:
-        st.error("Файлы не найдены")
+        st.error("Файлы контента не найдены")
 
 # --- СБОРКА ZIP ---
 if process_btn and tw > 0 and th > 0:
