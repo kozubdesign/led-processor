@@ -53,46 +53,18 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* Скрываем системные подсказки */
-    [data-testid="stInputInstructions"] {{ display: none !important; }}
-    
-    /* ФИКС ОБВОДКИ: Убираем дублирование и принудительно делаем зеленой */
-    div[data-baseweb="input"] {{
-        border: 1px solid #d3d3d3 !important;
-        border-radius: 8px !important;
-        box-shadow: none !important;
+    /* Убираем подсказки "Press Enter to apply" */
+    [data-testid="stInputInstructions"] {{
+        display: none !important;
     }}
     
-    /* Убираем внутренние системные рамки Streamlit */
-    div[data-baseweb="input"] > div {{
-        border: none !important;
-        box-shadow: none !important;
-        outline: none !important;
-    }}
-
-    /* Состояние фокуса и наведения — только одна зеленая рамка */
-    div[data-baseweb="input"]:focus-within, div[data-baseweb="input"]:hover {{
-        border-color: #28a745 !important;
-        box-shadow: 0 0 0 1px #28a745 !important;
-        outline: none !important;
-    }}
-
-    /* Слайдер в зеленый */
-    div[data-testid="stSlider"] [data-baseweb="slider-track"] > div {{
-        background: #28a745 !important;
-    }}
-    div[data-testid="stSlider"] [data-baseweb="slider-thumb"] {{
-        background-color: #28a745 !important;
-        border: 2px solid #28a745 !important;
-    }}
-
-    /* Логотип */
     .logo-container {{
         display: flex;
         justify-content: center;
         margin-top: 20px;
         margin-bottom: 20px;
     }}
+    
     .logo-img {{ width: 150px; }}
     
     @media (prefers-color-scheme: light) {{
@@ -103,6 +75,7 @@ st.markdown(f"""
         .logo-light {{ display: none; }}
         .logo-dark {{ display: block; }}
     }}
+    
     @media (max-width: 640px) {{
         .logo-img {{ width: 100px; }}
     }}
@@ -111,14 +84,12 @@ st.markdown(f"""
     .stNumberInput, .stSlider {{ width: 100% !important; }}
     [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
 
-    /* Кнопки */
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
-        border: none !important;
     }}
     .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
@@ -133,7 +104,7 @@ st.markdown(f"""
     <div class='main-title'>LED Content Generator</div>
     """, unsafe_allow_html=True)
 
-# ====================== ЛОГИКА ПРИЛОЖЕНИЯ ======================
+# ====================== ЛОГИКА ======================
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
@@ -145,7 +116,6 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Сетка ввода
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
@@ -160,7 +130,6 @@ default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-# Превью
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
     if preview:
@@ -177,7 +146,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
 st.markdown("<br>", unsafe_allow_html=True)
 btn_placeholder = st.empty()
 
-# Кнопки генерации и скачивания
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
