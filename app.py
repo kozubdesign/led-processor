@@ -43,7 +43,6 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-# Добавлена фавиконка через page_icon
 st.set_page_config(
     page_title="LED Generator", 
     page_icon="favicon.png", 
@@ -53,18 +52,17 @@ st.set_page_config(
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
 
+# В f-строках (f""") все CSS-скобки должны быть двойными {{ }}
 st.markdown(f"""
     <style>
-    /* Установка фона всей страницы */
     .stApp {{
         background-color: #f5f7f9;
     }}
 
-    /* Адаптация фона под темную тему, если пользователь её выберет */
     @media (prefers-color-scheme: dark) {{
         .stApp {{
             background-color: #0e1117;
-        }
+        }}
     }}
 
     .block-container {{ 
@@ -75,7 +73,6 @@ st.markdown(f"""
     
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* Убираем подсказки "Press Enter to apply" */
     [data-testid="stInputInstructions"] {{
         display: none !important;
     }}
