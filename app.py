@@ -77,8 +77,8 @@ c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 
-# ОБНОВЛЕННЫЙ ВВОД ШАГА (поддержка float)
-with c3: pitch = st.number_input("Шаг (мм)", min_value=0, value=0, step=0.1, format="%.2f")
+# Шаг пикселя по умолчанию 0 (float), формат вывода без принудительных нулей (%g)
+with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%g")
 
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 70)
 
