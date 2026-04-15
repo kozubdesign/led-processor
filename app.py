@@ -87,8 +87,25 @@ st.markdown(f"""
     
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
+    /* Стиль для заглушки превью */
+    .preview-placeholder {{
+        width: 100%;
+        height: 250px;
+        background-color: #f8f9fa;
+        border: 2px dashed #dce0e4;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+        font-weight: 500;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }}
+
     @media (max-width: 768px) {{
-        .preview-img {{ max-height: 200px !important; }}
+        .preview-img, .preview-placeholder {{ max-height: 200px !important; }}
     }}
 
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
@@ -115,6 +132,7 @@ st.markdown(f"""
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
+# Плейсхолдер для превью (будет заполнен либо картинкой, либо серым блоком)
 preview_placeholder = st.empty()
 
 logo_h_img = get_cached_logo("logo_h.png")
@@ -157,6 +175,7 @@ with c4:
         key=f"slider_{orientation_key}"
     )
 
+# ====================== ЛОГИКА ОТОБРАЖЕНИЯ ПРЕВЬЮ ======================
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -168,6 +187,13 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
                 <img class="preview-img" src="data:image/jpeg;base64,{img_str}">
             </div>
         ''', unsafe_allow_html=True)
+else:
+    # Если размеры не заполнены, показываем серую заглушку
+    preview_placeholder.markdown('''
+        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+            <div class="preview-placeholder">Тут будет превью</div>
+        </div>
+    ''', unsafe_allow_html=True)
 
 # ====================== БЛОК КНОПОК ======================
 st.markdown("<br>", unsafe_allow_html=True)
@@ -179,7 +205,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        # Текст на кнопке изменен на "Скачать архив"
         action_placeholder.download_button(
             label="Скачать архив", 
             data=st.session_state.zip_ready, 
