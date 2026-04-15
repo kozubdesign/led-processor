@@ -25,7 +25,6 @@ def get_base64_img(path):
 
 def reset_zip():
     st.session_state.zip_ready = None
-    st.session_state.processing = False
 
 @st.cache_data(show_spinner=False)
 def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm):
@@ -77,14 +76,33 @@ st.markdown(f"""
     [data-testid="stHeader"] {{ display: none; }}
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
+    
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+    
+    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
+        content: ""; 
+        display: inline-block; 
+        width: 18px; 
+        height: 18px; 
+        margin-right: 10px;
+        vertical-align: middle; 
+        border-radius: 50%;
+        border: 2px solid rgba(0,0,0,0.1);
+        border-top-color: #28a745;
+        animation: spin 0.8s linear infinite;
+    }}
+    
+    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
+    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    div.stButton, div.stDownloadButton {{
+    
+    div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important;
     }}
+    
     .res-box {{ 
         width: 100%; text-align: center; background-color: #d4edda; color: #155724; 
         padding: 10px; border-radius: 8px; margin: 15px 0; 
@@ -110,9 +128,9 @@ bg_files = [os.path.join("images", f) for f in os.listdir("images")
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
 c1, c2, c3 = st.columns(3)
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip, key="w_input")
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip, key="h_input")
-with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_zip, key="p_input")
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip, key="w_mm_input")
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip, key="h_mm_input")
+with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_zip, key="pitch_input")
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -130,7 +148,7 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 cs = st.columns(1)[0]
 default_scale = 50 if tw >= th else 40
-with cs: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="scale_slider")
+with cs: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip, key="logo_scale_slider")
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
@@ -148,43 +166,39 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# БЛОК КНОПОК - Используем контейнер для стабильности
-action_container = st.container()
+# БЛОК КНОПОК
+button_container = st.container()
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
-    if st.session_state.zip_ready:
-        current_date = datetime.now().strftime("%y_%m_%d")
-        zip_filename = f"{tw}x{th}_{current_date}.zip"
-        action_container.download_button(label="Скачать архив", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary", key="dl_btn")
-        if action_container.button("Сбросить", key="reset_btn"):
-            reset_zip()
-            st.rerun()
+    with button_container:
+        action_placeholder = st.empty()
+        
+        if st.session_state.zip_ready:
+            current_date = datetime.now().strftime("%y_%m_%d")
+            zip_filename = f"{tw}x{th}_{current_date}.zip"
+            action_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary", key="download_zip_btn")
+        
+        elif st.session_state.processing:
+            zip_buffer = io.BytesIO()
+            total_files = len(bg_files)
             
-    elif st.session_state.processing:
-        # Индикатор процесса без пересоздания кнопки в цикле
-        progress_bar = action_container.progress(0)
-        status_text = action_container.empty()
-        
-        zip_buffer = io.BytesIO()
-        total_files = len(bg_files)
-        
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for i, f in enumerate(bg_files):
-                percent = (i + 1) / total_files
-                status_text.markdown(f"<p style='text-align:center;'>Обработка: {int(percent*100)}%</p>", unsafe_allow_html=True)
-                progress_bar.progress(percent)
-                
-                processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
-                if processed:
-                    img_byte_arr = io.BytesIO()
-                    processed.save(img_byte_arr, format='JPEG', quality=95)
-                    zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-        
-        st.session_state.zip_ready = zip_buffer.getvalue()
-        st.session_state.processing = False
-        st.rerun()
-    
-    else:
-        if action_container.button("Создать контент", type="primary", key="gen_btn"):
-            st.session_state.processing = True
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                for i, f in enumerate(bg_files):
+                    percent = int(((i + 1) / total_files) * 100)
+                    # Используем стабильный ключ для кнопки статуса
+                    action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key="btn_processing_active")
+                    
+                    processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
+                    if processed:
+                        img_byte_arr = io.BytesIO()
+                        processed.save(img_byte_arr, format='JPEG', quality=95)
+                        zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+            
+            st.session_state.zip_ready = zip_buffer.getvalue()
+            st.session_state.processing = False
             st.rerun()
+        
+        else:
+            if action_placeholder.button("Создать контент", type="primary", key="start_processing_btn"):
+                st.session_state.processing = True
+                st.rerun()
