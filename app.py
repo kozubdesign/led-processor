@@ -34,8 +34,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. ШАПКА (САМАЯ ПЕРВАЯ СТРОКА ВЫВОДА)
+# 1. ШАПКА - ВСЕГДА ПЕРВАЯ
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
+
+# 2. КОНТЕЙНЕР ДЛЯ ПРЕВЬЮ И РАЗРЕШЕНИЯ (будет заполнен после ввода данных ниже)
+top_display = st.container()
 
 @st.cache_resource
 def get_cached_logo(path):
@@ -67,19 +70,15 @@ logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# 2. РЕЗЕРВИРУЕМ МЕСТО ПОД ПРЕВЬЮ И РАЗРЕШЕНИЕ (сразу под шапкой)
-preview_placeholder = st.empty()
-res_placeholder = st.empty()
-
-# 3. ПОЛЯ ВВОДА (внизу)
+# 3. ПОЛЯ ВВОДА (в коде идут после контейнера, но визуально будут под ним)
 st.markdown("---")
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
-with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=0, key="w_mm")
-with col_h: h_mm = st.number_input("Высота (мм)", 0, value=0, key="h_mm")
-with col_p: pitch = st.number_input("Шаг (мм)", 0, value=0, key="pitch")
+with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=0)
+with col_h: h_mm = st.number_input("Высота (мм)", 0, value=0)
+with col_p: pitch = st.number_input("Шаг (мм)", 0, value=0)
 with col_s: logo_p = st.slider("Лого %", 0, 150, 0)
 
-# ЛОГИКА ОТОБРАЖЕНИЯ (Заполняем пустые места наверху)
+# Заполняем верхний контейнер, если есть данные
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     
@@ -90,19 +89,20 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
             preview.save(buf, format="JPEG", quality=90)
             img_str = base64.b64encode(buf.getvalue()).decode()
             
-            # Вставляем превью в зарезервированное место №2
-            preview_placeholder.markdown(f'''
-                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                    <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 350px; border-radius: 4px; border: 1px solid #ddd;">
-                </div>
-            ''', unsafe_allow_html=True)
-            
-            # Вставляем разрешение в зарезервированное место №3
-            res_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+            # Рендерим ПРЯМО ВНУТРЬ верхнего контейнера
+            with top_display:
+                st.markdown(f'''
+                    <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                        <img src="data:image/jpeg;base64,{img_str}" style="max-width: 100%; max-height: 350px; border-radius: 4px; border: 1px solid #ddd;">
+                    </div>
+                ''', unsafe_allow_html=True)
+                st.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
 
-    # 4. КНОПКА
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("Обработать все изображения"):
+# 4. КНОПКА (самый низ)
+st.markdown("<br>", unsafe_allow_html=True)
+if st.button("Обработать все изображения"):
+    if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
+        tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
             for f in bg_files:
