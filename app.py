@@ -5,7 +5,6 @@ import os
 import base64
 from PIL import Image
 from datetime import datetime
-import streamlit.components.v1 as components
 
 # ====================== КОНСТАНТЫ ======================
 LOGO_PATH = "logo.png"
@@ -14,89 +13,70 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# ====================== УЛУЧШЕННЫЙ CSS ДЛЯ ЦЕНТРИРОВАНИЯ ======================
+# ====================== УЛЬТИМАТИВНЫЙ CSS ======================
 st.markdown("""
     <style>
+    /* Центрирование контента */
     .block-container {
         max-width: 1000px !important;
         margin: 0 auto !important;
         padding-top: 1.5rem !important;
     }
 
+    /* Заголовок */
     h1 {
         text-align: center !important;
         font-size: 2.25rem !important;
         margin-bottom: 25px !important; 
+        width: 100% !important;
     }
 
-    /* Стилизация блока превью и разрешения */
+    /* Превью и разрешение */
     .preview-block {
         display: flex;
         flex-direction: column;
         align-items: center;
         margin-bottom: 20px;
+        width: 100%;
     }
 
+    /* Зеленая плашка разрешения */
     div[data-testid="stNotification"] {
         max-width: 600px !important;
         margin: 0 auto !important;
+    }
+    
+    div[data-testid="stNotification"] div[role="alert"] {
+        justify-content: center !important;
         text-align: center !important;
     }
 
-    /* ГЛОБАЛЬНОЕ ЦЕНТРИРОВАНИЕ КНОПОК */
-    /* Находим контейнер кнопки и заставляем его быть флекс-боксом по центру */
+    /* Принудительная зеленая обводка полей ввода */
+    div[data-testid="stNumberInput"] input {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 1px #28a745 !important;
+    }
+
+    /* КНОПКА СТРОГО ПО ЦЕНТРУ СТРАНИЦЫ (ПОД ЗАГОЛОВКОМ) */
     div.stButton, div[data-testid="stDownloadButton"] {
         display: flex !important;
         justify-content: center !important;
         width: 100% !important;
-        margin: 20px 0 !important;
+        margin-top: 30px !important;
     }
 
-    /* Стили самой кнопки */
     .stButton > button, div[data-testid="stDownloadButton"] > button {
         background-color: #28a745 !important;
         color: white !important;
         font-weight: 600 !important;
-        height: 48px !important;
-        width: 260px !important; /* Немного увеличил для солидности */
-        border-radius: 6px !important;
+        height: 52px !important;
+        width: 300px !important; /* Фиксированная ширина для симметрии */
+        border-radius: 8px !important;
         border: none !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-        transition: transform 0.1s ease !important;
-    }
-
-    .stButton > button:active {
-        transform: scale(0.98);
-    }
-
-    /* Исправление отступов в колонках для выравнивания */
-    div[data-testid="column"] {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
+        margin: 0 auto !important; /* Центрирование внутри флекс-контейнера */
     }
     </style>
     """, unsafe_allow_html=True)
-
-# JS для зеленой обводки при фокусе/вводе
-components.html("""
-    <script>
-    const inputs = window.parent.document.querySelectorAll('input[type="number"]');
-    inputs.forEach(input => {
-        input.addEventListener('focus', function() {
-            this.style.borderColor = '#28a745';
-            this.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,0.25)';
-        });
-        input.addEventListener('input', function() {
-            this.style.borderColor = '#28a745';
-        });
-        input.addEventListener('blur', function() {
-            this.style.borderColor = '';
-            this.style.boxShadow = '';
-        });
-    });
-    </script>
-    """, height=0)
 
 # ====================== ЗАГОЛОВОК ======================
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
@@ -136,16 +116,15 @@ def process_single_image(bg_path, logo_img, tw, th, logo_percent):
     except: return None
 
 # ====================== ВВОД ДАННЫХ ======================
-# Распределение: Ширина(2), Высота(2), Шаг пикселя(2), Слайдер(3)
-col1, col2, col3, col4 = st.columns([2, 2, 2, 3])
+col_w, col_h, col_p, col_s = st.columns([2, 2, 2, 3])
 
-with col1:
+with col_w:
     w_mm = st.number_input("Ширина (мм)", min_value=0, value=0, step=10)
-with col2:
+with col_h:
     h_mm = st.number_input("Высота (мм)", min_value=0, value=0, step=10)
-with col3:
+with col_p:
     pitch = st.number_input("Шаг пикселя (мм)", min_value=0, value=0, step=1)
-with col4:
+with col_s:
     logo_percent = st.slider("Размер логотипа в %", 0, 150, 60, 5)
 
 fields_filled = w_mm > 0 and h_mm > 0 and pitch > 0
@@ -162,7 +141,7 @@ if fields_filled:
             preview = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
             if preview:
                 buf = io.BytesIO()
-                preview.save(buf, format="JPEG", quality=100) # Качество 100
+                preview.save(buf, format="JPEG", quality=100)
                 img_str = base64.b64encode(buf.getvalue()).decode()
                 st.markdown(f'''
                     <div style="display: flex; justify-content: center; margin-bottom: 10px;">
@@ -173,22 +152,22 @@ if fields_filled:
         st.success(f"**Разрешение: {tw} × {th} px**")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ====================== ЛОГИКА КНОПОК (БЕЗ COLUMNS) ======================
-# Кнопки вынесены из колонок, чтобы CSS-центрирование по всей ширине сработало идеально
+# ====================== ЛОГИКА КНОПОК ======================
+# Кнопки НЕ в колонках — это гарантирует центрирование по всей ширине страницы
 if fields_filled:
     if st.session_state.zip_data is None:
         if st.button("Генерировать контент"):
             logo_img = get_processing_logo()
             bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
             if logo_img and bg_files:
-                with st.spinner("Генерация файлов..."):
+                with st.spinner("Генерация..."):
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                         for i, fname in enumerate(bg_files):
                             res = process_single_image(os.path.join(SOURCE_FOLDER, fname), logo_img, tw, th, logo_percent)
                             if res:
                                 b = io.BytesIO()
-                                res.save(b, format="JPEG", quality=100, subsampling=0) # Качество 100
+                                res.save(b, format="JPEG", quality=100, subsampling=0)
                                 zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", b.getvalue())
                     st.session_state.zip_data = zip_buffer.getvalue()
                     st.session_state.file_name = f"LED_{datetime.now().strftime('%y%m%d')}.zip"
