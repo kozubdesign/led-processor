@@ -43,7 +43,6 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-# Добавлен favicon.png
 st.set_page_config(page_title="LED Generator", layout="wide", page_icon="favicon.png")
 
 logo_black_base64 = get_base64_img("logo_black.png")
@@ -54,16 +53,16 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     [data-testid="stInputInstructions"] {{ display: none !important; }}
-    
+   
     .logo-container {{
         display: flex;
         justify-content: center;
         margin-top: 20px;
         margin-bottom: 20px;
     }}
-    
+   
     .logo-img {{ width: 150px; }}
-    
+   
     @media (prefers-color-scheme: light) {{
         .logo-dark {{ display: none; }}
         .logo-light {{ display: block; }}
@@ -72,15 +71,13 @@ st.markdown(f"""
         .logo-light {{ display: none; }}
         .logo-dark {{ display: block; }}
     }}
-    
+   
     @media (max-width: 640px) {{
         .logo-img {{ width: 100px; }}
     }}
-
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     .stNumberInput, .stSlider {{ width: 100% !important; }}
     [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
-
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
@@ -88,13 +85,13 @@ st.markdown(f"""
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
     }}
-    .res-box {{ 
+    .res-box {{
         width: 100%; box-sizing: border-box;
-        text-align: center; background-color: #d4edda; color: #155724; 
+        text-align: center; background-color: #d4edda; color: #155724;
         padding: 15px; border-radius: 8px; margin: 10px 0; font-weight: bold; font-size: 1.2rem;
     }}
     </style>
-    
+   
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
@@ -111,7 +108,8 @@ resolution_placeholder = st.empty()
 
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
-bg_files = [os.path.join("images", f) for f in os.listdir("images") 
+
+bg_files = [os.path.join("images", f) for f in os.listdir("images")
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
 c1, c2, c3 = st.columns(3)
@@ -128,7 +126,7 @@ default_scale = 50 if tw >= th else 40
 with cs:
     logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-# Оптимизация: Обрабатываем ТОЛЬКО 1 картинку для превью
+# Превью
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
     if preview:
@@ -154,7 +152,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         btn_placeholder.button("⏳ Генерируем...", disabled=True)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            # Массовая обработка включается только здесь
             for f in bg_files:
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
                 if processed:
@@ -165,7 +162,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.session_state.processing = False
         st.rerun()
     else:
-        # Текст кнопки оставлен как в исходнике (Создать контент)
         if btn_placeholder.button("Генераровать"):
             st.session_state.processing = True
             st.rerun()
