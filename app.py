@@ -49,7 +49,7 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
             
-            # 1. Подготовка фона (ресайз и кроп)
+            # 1. Подготовка фона
             img_aspect = img.width / img.height
             target_aspect = tw / th
             if img_aspect > target_aspect:
@@ -63,23 +63,21 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
             top = (new_height - th) / 2
             img = img.crop((left, top, left + tw, top + th))
 
-            # 2. РАСЧЕТ РАЗМЕРА ЛОГОТИПА ПО ПРАВИЛУ
+            # 2. ЛОГИКА РАЗМЕРА ЛОГОТИПА
             lw, lh = logo_rgba.size
             l_aspect = lw / lh
             
-            # ОПРЕДЕЛЯЕМ ПО КАКОЙ СТОРОНЕ РАБОТАЕМ
             if tw >= th:
-                # Горизонтальный экран (или квадрат) -> 50% от ВЫСОТЫ
+                # Ширина больше высоты -> 50% от ВЫСОТЫ
                 target_logo_h = (th * 0.50) * (user_scale_percent / 100)
                 new_lh = int(target_logo_h)
                 new_lw = int(target_logo_h * l_aspect)
             else:
-                # Вертикальный экран -> 50% от ШИРИНЫ
+                # Высота больше ширины -> 50% от ШИРИНЫ
                 target_logo_w = (tw * 0.50) * (user_scale_percent / 100)
                 new_lw = int(target_logo_w)
                 new_lh = int(target_logo_w / l_aspect)
             
-            # Защита от нулевых размеров
             new_lw, new_lh = max(1, new_lw), max(1, new_lh)
             logo_res = logo_rgba.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
 
@@ -94,12 +92,12 @@ bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER)
 
 st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=8000)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=6000)
-with c3: pitch = st.number_input("Шаг (мм)", 1, value=10)
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
+with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 200, 100)
 
-if w_mm > 0 and h_mm > 0:
+if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     if logo_img and bg_files:
         preview = process_single_image(bg_files[0], logo_img, tw, th, logo_scale)
@@ -117,7 +115,7 @@ if w_mm > 0 and h_mm > 0:
 st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
 
-if w_mm > 0 and h_mm > 0:
+if w_mm > 0 and h_mm > 0 and pitch > 0:
     if button_placeholder.button("Создать контент"):
         button_placeholder.empty()
         with st.spinner("Создание контента..."):
