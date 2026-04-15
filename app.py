@@ -40,7 +40,7 @@ st.markdown("""
     <style>
     .block-container { max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }
     [data-testid="stHeader"] { display: none; }
-    .main-title { text-align: center; font-size: 1.8rem; font-weight: bold; margin-bottom: 20px; }
+    .main-title { text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }
     
     /* Одинаковая ширина полей на мобилках */
     [data-testid="column"] { width: 100% !important; flex: 1 1 0% !important; min-width: 0px !important; }
