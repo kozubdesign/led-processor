@@ -72,32 +72,25 @@ logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
+    /* УБИРАЕМ КНОПКИ +/- */
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
 
     .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
     
+    [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
+    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
+
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
     
+    /* СТИЛИ ПРЕВЬЮ */
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
-    /* СТИЛЬ ЗАГЛУШКИ */
-    .preview-stub {{
-        width: 100%;
-        height: 250px;
-        background-color: #f0f2f6;
-        border-radius: 8px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: #808495;
-        font-size: 1rem;
-        border: 1px dashed #ced4da;
-        margin-bottom: 10px;
+    @media (max-width: 768px) {{
+        .preview-img {{ max-height: 200px !important; }}
     }}
 
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
@@ -156,7 +149,6 @@ with c4:
     default_scale = 50 if tw >= th else 40
     logo_scale = st.slider("Лого %", 0, 100, default_scale, on_change=reset_zip)
 
-# ЛОГИКА ОТОБРАЖЕНИЯ ПРЕВЬЮ ИЛИ ЗАГЛУШКИ
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -170,8 +162,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         ''', unsafe_allow_html=True)
         res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
         resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
-else:
-    preview_placeholder.markdown('<div class="preview-stub">тут будет превью</div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
