@@ -33,7 +33,6 @@ def get_bg_files(folder):
 
 @st.cache_data(show_spinner=False)
 def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent):
-    # Для превью используем более быстрый BOX ресайз
     return process_single_image(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, fast=True)
 
 def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, fast=False):
@@ -70,15 +69,29 @@ st.markdown(f"""
     <style>
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
+    
+    /* СКРЫТИЕ КНОПОК +/- В ИНПУТАХ */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {{
+        -webkit-appearance: none;
+        margin: 0;
+    }}
+    input[type=number] {{
+        -moz-appearance: textfield;
+    }}
+    
+    /* Скрытие мелких подсказок "Press Enter to apply" */
     [data-testid="stInputInstructions"] {{ display: none !important; }}
+    
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
     @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
     @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     @media (max-width: 640px) {{ .logo-img {{ width: 100px; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
+    
     .stNumberInput, .stSlider {{ width: 100% !important; }}
-    [data-testid="column"] {{ padding-left: 0rem !important; padding-right: 0rem !important; }}
+    
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
@@ -110,10 +123,20 @@ logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = get_bg_files("images")
 
+# Колонки ввода с динамическими галочками
 c1, c2, c3 = st.columns(3)
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%g")
+
+with c1:
+    label_w = "Ширина (мм) ✅" if st.session_state.get('w_mm', 0) > 0 else "Ширина (мм)"
+    w_mm = st.number_input(label_w, min_value=0, value=0, key='w_mm')
+
+with c2:
+    label_h = "Высота (мм) ✅" if st.session_state.get('h_mm', 0) > 0 else "Высота (мм)"
+    h_mm = st.number_input(label_h, min_value=0, value=0, key='h_mm')
+
+with c3:
+    label_p = "Шаг (мм) ✅" if st.session_state.get('pitch', 0.0) > 0 else "Шаг (мм)"
+    pitch = st.number_input(label_p, min_value=0.0, value=0.0, step=0.1, format="%g", key='pitch')
 
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
@@ -144,12 +167,11 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
+        btn_placeholder.download_button(label="Скачать архив", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
     elif st.session_state.processing:
         btn_placeholder.button("⏳ Генерируем...", disabled=True)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            # Параллельная обработка всех файлов
             with ThreadPoolExecutor() as executor:
                 results = executor.map(lambda f: process_to_zip(f, logo_h_img, logo_v_img, tw, th, logo_scale), bg_files)
                 for res in results:
