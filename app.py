@@ -12,11 +12,9 @@ FAVICON_PATH = "favicon.ico"
 FAVICON_PNG = "favicon.png"
 SOURCE_FOLDER = "images"
 
-# --- ОПРЕДЕЛЕНИЕ ТЕМЫ И ЛОГОТИПА ---
-def get_logo_for_header():
-    # Простое определение тёмной темы через Streamlit (работает в большинстве случаев)
+# --- ОПРЕДЕЛЕНИЕ ЛОГОТИПА ДЛЯ ШАПКИ ---
+def get_header_logo():
     is_dark = st.get_option("theme.base") == "dark"
-    
     if is_dark and os.path.exists(BLACK_LOGO_PATH):
         return BLACK_LOGO_PATH
     elif os.path.exists(DEFAULT_LOGO_PATH):
@@ -31,63 +29,84 @@ elif os.path.exists(FAVICON_PNG):
 else:
     st.set_page_config(page_title="LED Processor", layout="centered")
 
-# --- CSS ---
+# --- CSS для максимальной центровки ---
 st.markdown("""
     <style>
     .block-container {
         padding-top: 1.5rem !important;
         padding-bottom: 2rem !important;
-        max-width: 820px !important;
+        max-width: 800px !important;
+        margin: 0 auto !important;
     }
+    
     h1 {
         text-align: center !important;
-        font-size: 2.2rem !important;
+        font-size: 2.25rem !important;
         margin-bottom: 0.8rem !important;
     }
+    
     .header-logo {
         display: block;
-        margin: 0 auto 1rem auto;
+        margin: 0 auto 1rem auto !important;
         height: 50px;
         object-fit: contain;
     }
+    
+    .preview-info {
+        text-align: center !important;
+        color: #666;
+        font-size: 1.05rem;
+        margin-bottom: 1.8rem !important;
+    }
+    
+    /* Центрируем все поля ввода */
+    div[data-testid="stNumberInput"] {
+        margin: 0 auto !important;
+        max-width: 320px !important;
+    }
+    
+    /* Узкое поле для шага пикселя */
+    .narrow-input {
+        max-width: 200px !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Кнопка по центру */
+    .stButton {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
     .stButton > button {
-        height: 3.4rem !important;
+        height: 3.5rem !important;
         font-weight: bold !important;
-        font-size: 1.05rem !important;
+        font-size: 1.08rem !important;
         background-color: #28a745 !important;
         color: white !important;
-        width: auto !important;
         min-width: 320px !important;
-        margin: 1.5rem auto 0 auto !important;
-        display: block !important;
+        width: auto !important;
+        margin-top: 1.2rem !important;
     }
-    .stButton > button:hover {
-        background-color: #218838 !important;
-    }
+    
     [data-testid="stImage"] {
         display: flex !important;
         justify-content: center !important;
-        margin: 1.5rem auto !important;
+        margin: 1.8rem auto !important;
     }
-    /* Сужаем поле Шаг пикселя */
-    div[data-testid="stNumberInput"] {
-        max-width: 220px !important;
-        margin: 0 auto !important;
-    }
-    /* Для поля шага делаем ещё уже */
-    .narrow-input > div > div {
-        max-width: 180px !important;
+    
+    .success-box {
+        text-align: center !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- ЛОГОТИП НАД ЗАГОЛОВКОМ ---
-header_logo_path = get_logo_for_header()
-if header_logo_path:
-    st.image(header_logo_path, use_container_width=False, width=200)  # ширина подстраивается, высота 50px через CSS
+# --- ЛОГОТИП В ШАПКЕ ---
+header_logo = get_header_logo()
+if header_logo:
+    st.image(header_logo, use_container_width=False, width=220, clamp=True)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #666; margin-bottom: 1.5rem;">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
+st.markdown('<p class="preview-info">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
 
 # --- SESSION STATE ---
 if 'zip_data' not in st.session_state:
@@ -97,7 +116,7 @@ if 'zip_data' not in st.session_state:
 if 'uploaded_logo' not in st.session_state:
     st.session_state.uploaded_logo = None
 
-# --- ПОЛУЧЕНИЕ ЛОГОТИПА ДЛЯ ОБРАБОТКИ ---
+# --- ЛОГОТИП ДЛЯ ОБРАБОТКИ ---
 def get_logo_image():
     if st.session_state.uploaded_logo is not None:
         return Image.open(st.session_state.uploaded_logo).convert("RGBA")
@@ -108,7 +127,7 @@ def get_logo_image():
             return None
     return None
 
-# --- ФУНКЦИЯ ОБРАБОТКИ ---
+# --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ---
 def process_single_image(bg_path, logo_img, target_w, target_h, logo_percent=45):
     try:
         if not os.path.exists(bg_path) or logo_img is None:
@@ -143,16 +162,14 @@ def process_single_image(bg_path, logo_img, target_w, target_h, logo_percent=45)
         return img
         
     except Exception as e:
-        st.error(f"Ошибка обработки: {e}")
+        st.error(f"Ошибка: {e}")
         return None
 
 # --- САЙДБАР ---
 with st.sidebar:
     st.header("Настройки")
-    
-    st.session_state.uploaded_logo = st.file_uploader(
-        "Загрузить другой логотип", type=['png', 'jpg', 'jpeg']
-    )
+    st.session_state.uploaded_logo = st.file_uploader("Загрузить другой логотип", 
+                                                     type=['png', 'jpg', 'jpeg'])
     
     if st.session_state.uploaded_logo:
         st.success("✓ Логотип загружен")
@@ -161,45 +178,45 @@ with st.sidebar:
     
     logo_percent = st.slider("Размер логотипа (%)", 20, 70, 45, 5)
 
-# --- ПАРАМЕТРЫ ЭКРАНА ---
-_, central_col, _ = st.columns([0.4, 1.2, 0.4])
+# --- ПАРАМЕТРЫ ЭКРАНА (всё по центру) ---
+st.markdown("### Параметры экрана")
 
-with central_col:
-    st.markdown("### Параметры экрана")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
-    with col2:
-        h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
-    
-    # Узкое поле для шага пикселя
-    pitch = st.number_input(
-        "Шаг пикселя (мм)", 
-        min_value=0.0, 
-        max_value=999.99999, 
-        value=0.0, 
-        format="%.5f", 
-        step=0.00001,
-        label_visibility="visible"
-    )
-    
-    fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.00001
-    
-    if fields_filled:
-        tw = int(round(w_mm / pitch))
-        th = int(round(h_mm / pitch))
-        st.success(f"**Разрешение: {tw} × {th} px**")
-    else:
-        tw = th = 0
+col1, col2 = st.columns([1, 1])
+with col1:
+    w_mm = st.number_input("Ширина экрана (мм)", 
+                          min_value=0, max_value=9999999, value=0, step=10)
+with col2:
+    h_mm = st.number_input("Высота экрана (мм)", 
+                          min_value=0, max_value=9999999, value=0, step=10)
 
-# --- ПРЕВЬЮ (макс 800×400) ---
+# Узкое поле шага пикселя по центру
+pitch = st.number_input(
+    "Шаг пикселя (мм)", 
+    min_value=0.0, 
+    max_value=999.99999, 
+    value=0.0, 
+    format="%.5f", 
+    step=0.00001
+)
+
+fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.00001
+
+if fields_filled:
+    tw = int(round(w_mm / pitch))
+    th = int(round(h_mm / pitch))
+    st.success(f"**Разрешение: {tw} × {th} px**")
+else:
+    tw = th = 0
+
+# --- ПРЕВЬЮ ---
 if fields_filled:
     logo_img = get_logo_image()
     if logo_img:
         bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         if bg_files:
-            preview_img = process_single_image(os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent)
+            preview_img = process_single_image(
+                os.path.join(SOURCE_FOLDER, bg_files[0]), logo_img, tw, th, logo_percent
+            )
             if preview_img:
                 scale = min(800 / tw, 400 / th, 1.0)
                 display_w = int(tw * scale)
@@ -209,44 +226,45 @@ if fields_filled:
     else:
         st.error("Логотип не найден")
 
-# --- КНОПКА СОЗДАНИЯ АРХИВА ---
+# --- КНОПКА СОЗДАНИЯ ---
 if st.button("🚀 Создать архив с контентом", type="primary"):
-    if not fields_filled:
-        st.warning("Пожалуйста, заполните все параметры экрана")
-    else:
+    if fields_filled:
         logo_img = get_logo_image()
-        if logo_img:
+        if logo_img and os.path.exists(SOURCE_FOLDER):
             with st.spinner("Обработка изображений..."):
                 bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 if bg_files:
                     zip_buffer = io.BytesIO()
                     processed = 0
-                    progress_bar = st.progress(0)
+                    progress = st.progress(0)
                     
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                         for i, fname in enumerate(bg_files):
-                            result = process_single_image(os.path.join(SOURCE_FOLDER, fname), logo_img, tw, th, logo_percent)
-                            if result:
+                            res = process_single_image(
+                                os.path.join(SOURCE_FOLDER, fname), logo_img, tw, th, logo_percent
+                            )
+                            if res:
                                 buf = io.BytesIO()
-                                result.save(buf, format="JPEG", quality=95, optimize=True)
+                                res.save(buf, format="JPEG", quality=95, optimize=True)
                                 zf.writestr(f"{tw}x{th}_{i+1:02d}.jpg", buf.getvalue())
                                 processed += 1
-                            progress_bar.progress((i + 1) / len(bg_files))
+                            progress.progress((i + 1) / len(bg_files))
                     
                     zip_buffer.seek(0)
                     st.session_state.zip_data = zip_buffer.getvalue()
                     st.session_state.file_name = f"LED_{tw}x{th}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
                     
                     st.success(f"✅ Готово! Обработано {processed} изображений.")
+    else:
+        st.warning("Заполните все параметры экрана")
 
-# --- СКАЧИВАНИЕ ---
+# --- КНОПКА СКАЧИВАНИЯ ---
 if st.session_state.zip_data is not None:
     st.download_button(
         label="💾 Скачать ZIP-архив",
         data=st.session_state.zip_data,
         file_name=st.session_state.file_name,
         mime="application/zip",
-        use_container_width=False,
         type="primary"
     )
     
