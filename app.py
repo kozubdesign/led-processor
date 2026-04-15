@@ -41,10 +41,9 @@ def process_single_image(bg_path, logo_path, tw, th):
 # --- БЛОК ВЫВОДА ИЗОБРАЖЕНИЯ ---
 preview_container = st.empty()
 
-# --- БЛОК С ПАРАМЕТРАМИ И КНОПКОЙ (Уменьшенная ширина) ---
-# Создаем 3 колонки: [пустота, контент, пустота]
-# Соотношение 1:1:1 как раз уменьшает центральную часть в 3 раза
-col_left, col_mid, col_right = st.columns([1, 1, 1])
+# --- БЛОК С ПАРАМЕТРАМИ (Увеличен в 1.5 раза относительно прошлого варианта) ---
+# Соотношение [1, 2, 1] делает центральную колонку 50% ширины экрана (вместо 33%)
+col_left, col_mid, col_right = st.columns([1, 2, 1])
 
 with col_mid:
     w_mm = st.number_input("Ширина экрана (мм)", value=0, step=10)
@@ -61,7 +60,7 @@ with col_mid:
     st.write("")
     process_btn = st.button("Скачать контент", use_container_width=True)
 
-# Наполнение превью (оно остается широким над параметрами)
+# Наполнение превью
 with preview_container:
     if os.path.exists(SOURCE_FOLDER) and os.listdir(SOURCE_FOLDER) and os.path.exists(LOGO_PATH):
         files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
@@ -69,6 +68,7 @@ with preview_container:
             if tw > 0 and th > 0:
                 preview = process_single_image(os.path.join(SOURCE_FOLDER, files[0]), LOGO_PATH, tw, th)
                 if preview:
+                    # Ограничиваем превью, чтобы оно не было слишком огромным при широких экранах
                     st.image(preview, use_container_width=True, 
                              caption=f"Масштаб 1:3 ({tw}x{th} px)")
             else:
