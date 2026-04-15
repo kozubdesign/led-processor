@@ -7,7 +7,6 @@ from PIL import Image, ImageOps
 
 # ====================== ФУНКЦИИ ПОИСКА ФАЙЛОВ ======================
 def find_file_case_insensitive(filename):
-    """Ищет файл в корне, игнорируя регистр (находит logo_H.png если просили logo_h.png)"""
     if os.path.exists(filename):
         return filename
     current_dir = os.listdir('.')
@@ -16,15 +15,13 @@ def find_file_case_insensitive(filename):
             return f
     return None
 
-# Очищаем кэш если файлы менялись
 @st.cache_resource
 def get_cached_logo(path):
     found_path = find_file_case_insensitive(path)
     if found_path:
         try:
             return Image.open(found_path).convert("RGBA")
-        except Exception as e:
-            st.error(f"Ошибка открытия {found_path}: {e}")
+        except:
             return None
     return None
 
@@ -76,10 +73,8 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
             return img
     except: return None
 
-# Загрузка логотипов
 logo_h_img = get_cached_logo(LOGO_H_PATH)
 logo_v_img = get_cached_logo(LOGO_V_PATH)
-
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
@@ -88,10 +83,19 @@ c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%g")
-with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 70)
 
+# Рассчитываем разрешение заранее для определения ориентации
+tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
+
+# Установка значения по умолчанию в зависимости от ориентации
+default_scale = 50 if tw >= th else 40
+
+with c4: 
+    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
+
+if tw > 0 and th > 0:
     is_hor = tw >= th
     current_logo = logo_h_img if is_hor else logo_v_img
     
@@ -110,14 +114,12 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
     
     elif not current_logo:
         target_file = LOGO_H_PATH if is_hor else LOGO_V_PATH
-        st.error(f"Критическая ошибка: файл **{target_file}** не обнаружен!")
-        # Техническая отладка для тебя:
-        st.write("Файлы в директории:", os.listdir('.'))
+        st.error(f"Файл {target_file} не найден!")
 
 st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
 
-if w_mm > 0 and h_mm > 0 and pitch > 0:
+if tw > 0 and th > 0:
     if button_placeholder.button("Создать контент"):
         button_placeholder.empty()
         with st.spinner("Создание контента..."):
