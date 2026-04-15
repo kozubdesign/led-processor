@@ -75,31 +75,19 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* Шапка: лого + заголовок */
-    .header-container {{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 25px;
-        width: 100%;
+    /* Исправление ширины инпутов для мобильных устройств */
+    [data-testid="column"] {{
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
     }}
-    .logo-img {{ width: 80px; height: auto; }}
-    .main-title {{
-        font-size: 1.7rem;
-        font-weight: bold;
-        margin: 0;
-        line-height: 1.2;
+    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{
+        width: 100% !important;
     }}
 
-    /* Темная/светлая тема для лого */
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
-
-    /* Исправление инпутов */
-    [data-testid="column"] {{ width: 100% !important; flex: 1 1 100% !important; min-width: 100% !important; }}
-    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
-
+    .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
+    .logo-img {{ width: 100px; }}
+    
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
     button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
@@ -115,6 +103,10 @@ st.markdown(f"""
         animation: spin 0.8s linear infinite;
     }}
     
+    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
+    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
+    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
+    
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
         display: flex !important; justify-content: center !important; width: 100% !important;
     }}
@@ -127,18 +119,12 @@ st.markdown(f"""
         padding: 8px; border-radius: 8px; margin: 8px 0; 
         font-weight: 400; font-size: 0.8rem;
     }}
-
-    @media (max-width: 500px) {{
-        .header-container {{ flex-direction: column; text-align: center; gap: 5px; }}
-        .main-title {{ font-size: 1.4rem; }}
-    }}
     </style>
-
-    <div class="header-container">
+    <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
-        <div class="main-title">Генератор контента</div>
     </div>
+    <div class='main-title'>Генератор контента</div>
     """, unsafe_allow_html=True)
 
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
