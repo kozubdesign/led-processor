@@ -6,8 +6,8 @@ from PIL import Image
 from datetime import datetime
 
 # ====================== КОНСТАНТЫ ======================
-LOGO_PATH = "logo.png"              # тёмная тема
-LOGO_BLACK_PATH = "logo_black.png"  # светлая тема
+LOGO_PATH = "logo.png"
+LOGO_BLACK_PATH = "logo_black.png"
 FAVICON_PATH = "favicon.png"
 SOURCE_FOLDER = "images"
 
@@ -17,70 +17,55 @@ if os.path.exists(FAVICON_PATH):
 else:
     st.set_page_config(page_title="LED Processor", layout="centered")
 
-# ====================== CSS — СТРОГАЯ ЦЕНТРОВКА ======================
+# ====================== CSS ======================
 st.markdown("""
     <style>
     .block-container {
-        max-width: 760px !important;
+        max-width: 740px !important;
         margin: 0 auto !important;
         padding-top: 2rem !important;
     }
 
-    /* Шапка */
-    .header-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        margin-bottom: 30px;
-    }
-    .header-logo {
-        height: 58px;
+    .main-logo {
+        display: block;
+        margin: 0 auto 25px auto;
+        height: 65px;
         object-fit: contain;
-    }
-    .header-text {
-        font-size: 2.25rem;
-        font-weight: 700;
-        color: #1f2937;
-        margin: 0;
     }
 
     h1 {
         text-align: center !important;
-        font-size: 2.15rem !important;
-        margin: 10px 0 12px 0 !important;
+        font-size: 2.25rem !important;
+        margin-bottom: 12px !important;
     }
 
     .subtitle {
         text-align: center !important;
-        color: #555;
+        color: #666;
         font-size: 1.05rem;
-        margin-bottom: 35px !important;
+        margin-bottom: 40px !important;
     }
 
     .params-title {
         text-align: center !important;
         font-size: 1.35rem;
-        margin: 25px 0 18px 0;
+        margin: 25px 0 20px 0;
     }
 
-    /* Все поля строго по центру */
     div[data-testid="stNumberInput"] {
         margin: 0 auto 14px auto !important;
         max-width: 340px !important;
     }
 
-    /* Узкое поле шага пикселя */
     .step-input {
         max-width: 220px !important;
         margin: 0 auto 30px auto !important;
     }
 
-    /* Зелёная кнопка по центру */
     .stButton {
         display: flex !important;
         justify-content: center !important;
-        margin-top: 10px !important;
+        margin-top: 20px !important;
     }
     .stButton > button {
         background-color: #28a745 !important;
@@ -101,16 +86,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ====================== ШАПКА ======================
+# ====================== ЛОГОТИП ======================
 is_dark = st.get_option("theme.base") == "dark"
+header_logo = LOGO_PATH if is_dark else LOGO_BLACK_PATH
 
-header_logo = LOGO_PATH if is_dark and os.path.exists(LOGO_PATH) else LOGO_BLACK_PATH
-
-st.markdown('<div class="header-container">', unsafe_allow_html=True)
 if os.path.exists(header_logo):
-    st.image(header_logo, use_container_width=False, width=62)
-st.markdown('<h2 class="header-text">LEDsi</h2>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+    st.image(header_logo, use_container_width=False, width=180)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
@@ -186,14 +167,12 @@ with c1:
 with c2:
     h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 
-pitch = st.number_input(
-    "Шаг пикселя (мм)", 
-    min_value=0.0, 
-    max_value=999.99999, 
-    value=0.0, 
-    format="%.5f", 
-    step=0.00001
-)
+pitch = st.number_input("Шаг пикселя (мм)", 
+                       min_value=0.0, 
+                       max_value=999.99999, 
+                       value=0.0, 
+                       format="%.5f", 
+                       step=0.00001)
 
 fields_filled = w_mm > 0 and h_mm > 0 and pitch >= 0.00001
 
@@ -232,9 +211,9 @@ if st.button("🚀 Создать архив с контентом", type="prima
                     zip_buffer.seek(0)
                     st.session_state.zip_data = zip_buffer.getvalue()
                     st.session_state.file_name = f"LED_{tw}x{th}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
-                    st.success("✅ Архив успешно создан!")
+                    st.success("✅ Архив создан!")
     else:
-        st.warning("Пожалуйста, заполните все параметры экрана")
+        st.warning("Заполните все параметры экрана")
 
 # ====================== СКАЧИВАНИЕ ======================
 if st.session_state.zip_data is not None:
