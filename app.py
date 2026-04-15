@@ -48,34 +48,28 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     try:
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
-            # 1. Кроп и ресайз фона под размер экрана
+            # 1. Ресайз и кроп фона
             ir, tr = img.width / img.height, tw / th
             nw, nh = (tw, int(tw / ir)) if ir < tr else (int(th * ir), th)
             img = img.resize((nw, nh), Image.Resampling.LANCZOS)
             img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
             
-            # 2. РАСЧЕТ РАЗМЕРА ЛОГОТИПА (ЛОГИКА "АВТО")
-            # Вычисляем лимит по ширине (65%) и по высоте (30%)
-            # Берем МИНЬШЕЕ из них, чтобы лого гарантированно вписалось
-            base_limit = min(tw * 0.65, th * 0.30)
+            # 2. НОВАЯ ЛОГИКА РАЗМЕРА ЛОГОТИПА
+            # Ориентируемся на меньшую сторону (50% от неё)
+            if tw > th:
+                base_limit = th * 0.50  # Горизонтальный экран — 50% от высоты
+            else:
+                base_limit = tw * 0.50  # Вертикальный/квадратный — 50% от ширины
             
-            # Применяем бегунок к базовому лимиту
+            # Корректировка бегунком
             final_pixel_size = base_limit * (user_scale_percent / 100)
             
-            # 3. Ресайз самого логотипа
+            # 3. Ресайз логотипа
             lw, lh = logo_rgba.size
-            logo_aspect = lw / lh
+            scale = final_pixel_size / max(lw, lh)
+            new_lw, new_lh = int(lw * scale), int(lh * scale)
             
-            if logo_aspect > 1: # Лого горизонтальное
-                new_lw = int(final_pixel_size)
-                new_lh = int(final_pixel_size / logo_aspect)
-            else: # Лого вертикальное или квадратное
-                new_lh = int(final_pixel_size)
-                new_lw = int(final_pixel_size * logo_aspect)
-            
-            # Безопасная проверка, чтобы не упало при нуле
             new_lw, new_lh = max(1, new_lw), max(1, new_lh)
-            
             logo_res = logo_rgba.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
             
             # 4. Вставка по центру
@@ -94,7 +88,6 @@ with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 200, 100)
 
-tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     if logo_img and bg_files:
