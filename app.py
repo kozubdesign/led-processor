@@ -12,7 +12,7 @@ SOURCE_FOLDER = "images"
 # 1. Настройка страницы
 st.set_page_config(page_title="LED Processor", layout="centered")
 
-# 2. Заголовок (Сначала)
+# 2. Заголовок
 st.markdown("<h1 style='text-align: center;'>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 
 # --- ЛОГИКА ОБРАБОТКИ ---
@@ -38,23 +38,11 @@ def process_single_image(bg_path, logo_path, tw, th):
     except:
         return None
 
-# --- ВВОДНЫЕ ДАННЫЕ (нужны для превью) ---
-# Скрытый или предварительный расчет параметров
-st.write("") # Отступ
-
-# --- БЛОК С ПРЕДПРОСМОТРОМ (Потом) ---
-st.write("### 👀 Предпросмотр")
-# Резервируем место под параметры, чтобы они были ниже, но переменные tw/th были доступны
-# Для этого используем контейнеры или просто выносим ввод наверх через переменные
-
-# --- БЛОК С РАЗМЕРАМИ (Ниже превью) ---
-# Чтобы ввод был ниже, но влиял на превью выше, используем st.empty или просто логику Streamlit
-# Однако в Streamlit проще всего логически сначала объявить переменные.
-# Чтобы визуально размеры были НИЖЕ, мы используем пустой контейнер для превью.
-
+# --- БЛОК ВЫВОДА ИЗОБРАЖЕНИЯ (Выше настроек) ---
 preview_container = st.empty()
 
-st.write("### ⚙️ Параметры")
+# --- БЛОК С ПАРАМЕТРАМИ ---
+st.write("") 
 w_mm = st.number_input("Ширина экрана (мм)", value=0, step=10)
 h_mm = st.number_input("Высота экрана (мм)", value=0, step=10)
 pitch = st.number_input("Шаг пикселя (мм)", value=0.0, format="%.2f", step=0.01)
@@ -65,7 +53,7 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
 else:
     tw, th = 0, 0
 
-# Заполняем контейнер превью, который находится ВЫШЕ размеров
+# Наполнение контейнера превью без текста заголовка
 with preview_container:
     if os.path.exists(SOURCE_FOLDER) and os.listdir(SOURCE_FOLDER) and os.path.exists(LOGO_PATH):
         files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
@@ -74,19 +62,19 @@ with preview_container:
                 preview = process_single_image(os.path.join(SOURCE_FOLDER, files[0]), LOGO_PATH, tw, th)
                 if preview:
                     st.image(preview, width=(tw // 3 if tw // 3 > 300 else 400), 
-                             caption=f"Масштаб превью 1:3 ({tw}x{th} px)")
+                             caption=f"Масштаб 1:3 ({tw}x{th} px)")
             else:
-                st.info("Введите размеры ниже, чтобы увидеть результат")
+                st.info("Введите размеры ниже для генерации превью")
     else:
-        st.error("Ошибка: Файлы не найдены (logo.png или папка images)")
+        st.error("Файлы не найдены в репозитории")
 
-# --- КНОПКА (В самом конце) ---
+# --- КНОПКА СКАЧИВАНИЯ ---
 st.write("")
 process_btn = st.button("Скачать контент", use_container_width=True)
 
 if process_btn:
     if tw <= 0 or th <= 0:
-        st.error("Сначала введите корректные размеры!")
+        st.error("Укажите корректные размеры")
     else:
         with st.spinner('Сборка...'):
             bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
