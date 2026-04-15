@@ -81,29 +81,12 @@ st.markdown(f"""
     [data-testid="stHeader"] {{ display: none; }}
     
     [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
-
-    /* СТИЛИЗАЦИЯ ИНПУТОВ (Label внутри) */
-    div[data-testid="stNumberInput"], div[data-testid="stTextInput"] {{
-        position: relative;
-    }}
-    
-    div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label {{
-        position: absolute;
-        top: 36px;
-        left: 14px;
-        z-index: 10;
-        font-size: 14px;
-        color: #808495;
-        pointer-events: none;
-    }}
-
-    div[data-testid="stNumberInput"] input, div[data-testid="stTextInput"] input {{
-        padding-left: 75px !important; /* Отступ для текста пользователя */
-    }}
+    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
 
     .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
     
+    /* СТИЛИ ПРЕВЬЮ */
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
     @media (max-width: 768px) {{
@@ -164,7 +147,6 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 with c4:
     default_scale = 50 if tw >= th else 40
-    # Для слайдера оставляем стандартный вид, так как label внутри него не поместится красиво
     logo_scale = st.slider("Лого %", 0, 100, default_scale, on_change=reset_zip)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
