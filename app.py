@@ -141,7 +141,6 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
     tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
 
 with c4:
-    # Определяем ориентацию для выбора дефолтного значения
     if tw >= th and tw > 0:
         current_default = 35
         orientation_key = "horiz"
@@ -149,7 +148,6 @@ with c4:
         current_default = 50
         orientation_key = "vert"
     
-    # ИСПОЛЬЗУЕМ STEP=5 ДЛЯ ПОЛЗУНКА
     logo_scale = st.slider(
         "Размер логотипа %", 
         0, 100, 
@@ -181,7 +179,14 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        action_placeholder.download_button(label=f"Скачать {res_text}", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
+        # Текст на кнопке изменен на "Скачать архив"
+        action_placeholder.download_button(
+            label="Скачать архив", 
+            data=st.session_state.zip_ready, 
+            file_name=zip_filename, 
+            mime="application/zip", 
+            type="primary"
+        )
     elif st.session_state.processing:
         zip_buffer = io.BytesIO()
         total_files = len(bg_files)
