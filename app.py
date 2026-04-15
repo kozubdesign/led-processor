@@ -23,6 +23,10 @@ def get_base64_img(path):
         except: return ""
     return ""
 
+def reset_zip():
+    """Сбрасывает состояние готового архива при изменении параметров"""
+    st.session_state.zip_ready = None
+
 @st.cache_data(show_spinner=False)
 def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm):
     return process_single_image(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm)
@@ -69,12 +73,10 @@ st.markdown(f"""
     
     .logo-img {{ width: 150px; }}
     
-    /* Анимация вращения */
     @keyframes spin {{
         to {{ transform: rotate(360deg); }}
     }}
 
-    /* Вариант 1: Классический спиннер (iOS/macOS стиль) через CSS */
     button[disabled] p::before {{
         content: "";
         display: inline-block;
@@ -83,11 +85,10 @@ st.markdown(f"""
         margin-right: 12px;
         vertical-align: middle;
         border-radius: 50%;
-        /* Создаем эффект делений через конический градиент и маску */
         background: conic-gradient(from 0deg, transparent 0%, #ffffff 100%);
         mask: radial-gradient(farthest-side, transparent 65%, black 70%);
         -webkit-mask: radial-gradient(farthest-side, transparent 65%, black 70%);
-        animation: spin 1s steps(12) infinite; /* steps(12) создает эффект дискретного вращения как в iOS */
+        animation: spin 1s steps(12) infinite;
     }}
 
     @media (prefers-color-scheme: light) {{
@@ -135,9 +136,9 @@ bg_files = [os.path.join("images", f) for f in os.listdir("images")
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
 c1, c2, c3 = st.columns(3)
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-with c3: pitch_str = st.text_input("Шаг (мм)", value="0")
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0, on_change=reset_zip)
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=0, on_change=reset_zip)
+with c3: pitch_str = st.text_input("Шаг (мм)", value="0", on_change=reset_zip)
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -159,7 +160,7 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 cs = st.columns(1)[0]
 default_scale = 50 if tw >= th else 40
 with cs:
-    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
+    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale, on_change=reset_zip)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
