@@ -76,19 +76,25 @@ st.markdown(f"""
     [data-testid="stHeader"] {{ display: none; }}
     .logo-container {{ display: flex; justify-content: center; margin-top: 20px; margin-bottom: 20px; }}
     .logo-img {{ width: 150px; }}
+    
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     
-    button[disabled] p::before {{
-        content: ""; display: inline-block; width: 20px; height: 20px; margin-right: 12px;
-        vertical-align: middle; border-radius: 50%;
-        background: conic-gradient(from 0deg, transparent 0%, #ffffff 100%);
-        mask: radial-gradient(farthest-side, transparent 65%, black 70%);
-        -webkit-mask: radial-gradient(farthest-side, transparent 65%, black 70%);
-        animation: spin 1s steps(12) infinite;
+    /* Контрастная иконка загрузки (темная с зеленым акцентом) */
+    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
+        content: ""; 
+        display: inline-block; 
+        width: 18px; 
+        height: 18px; 
+        margin-right: 10px;
+        vertical-align: middle; 
+        border-radius: 50%;
+        border: 2px solid rgba(0,0,0,0.1); /* Светло-серое кольцо */
+        border-top-color: #28a745;       /* Зеленая активная часть */
+        animation: spin 0.8s linear infinite;
     }}
     
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
+    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ block; }} }}
+    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
     
     div.stButton, div.stDownloadButton, div.element-container:has(button) {{
@@ -169,7 +175,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         st.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     
     elif st.session_state.processing:
-        # Отображаем только неактивную кнопку со спиннером
         st.button("Идет генерация...", disabled=True)
         
         zip_buffer = io.BytesIO()
