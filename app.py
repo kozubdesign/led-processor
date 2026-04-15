@@ -100,7 +100,7 @@ with col_h: h_mm = st.number_input("Высота (мм)", 0, value=0, step=10)
 with col_p: pitch = st.number_input("Шаг (мм)", 0, value=0, step=1)
 with col_s: logo_percent = st.slider("Лого %", 0, 150, 0, 5)
 
-# Логика обработки и отображения
+# Логика обработки и отображения (только если значения больше 0)
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     if not logo_img:
         st.error(f"Файл логотипа '{LOGO_PATH}' не найден.")
@@ -123,7 +123,7 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
         
         st.success(f"**Разрешение: {tw} × {th} px**")
         
-        # Кнопка генерации (пример структуры для скачивания архива)
+        # Кнопка генерации
         if st.button("Обработать все изображения"):
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -140,5 +140,3 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
                 file_name=f"led_content_{datetime.now().strftime('%Y%m%d_%H%M')}.zip",
                 mime="application/zip"
             )
-else:
-    st.info("Пожалуйста, введите параметры экрана (Ширина, Высота и Шаг должны быть больше 0).")
