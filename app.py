@@ -13,23 +13,26 @@ SOURCE_FOLDER = "images"
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
 
-# ФИНАЛЬНЫЙ CSS С МИНИМАЛЬНЫМ ОТСТУПОМ СВЕРХУ
+# ИСПРАВЛЕННЫЙ CSS
 st.markdown("""
     <style>
-    /* Убираем отступ сверху у всего приложения */
+    /* Убираем верхние отступы основного контейнера и хедера */
     .block-container { 
         max-width: 800px !important; 
         margin: 0 auto !important; 
-        padding-top: 0rem !important; 
-        padding-bottom: 0rem !important;
+        padding-top: 1rem !important; /* Минимальный комфортный отступ */
     }
     
-    /* Убираем стандартный отступ у заголовка */
-    h2 { 
-        margin-top: -30px !important; 
-        padding-top: 0 !important;
-        text-align: center !important;
+    /* Убираем стандартные отступы Streamlit для элементов управления */
+    [data-testid="stHeader"] {
+        display: none;
+    }
+
+    .main-title {
+        text-align: center;
+        font-size: 1.8rem;
         font-weight: bold;
+        margin-bottom: 10px;
     }
 
     div.stButton, div.stDownloadButton, div.element-container:has(button) {
@@ -47,8 +50,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. ШАПКА
-st.header("Создать контент для LED-экрана")
+# 1. ШАПКА (Используем HTML класс вместо h2 для стабильности)
+st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
 # 2. МЕСТО ПОД ПРЕВЬЮ И РАЗРЕШЕНИЕ
 preview_placeholder = st.empty()
