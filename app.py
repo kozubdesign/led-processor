@@ -53,23 +53,32 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* ИЗМЕНЯЕМ ТОЛЬКО КРАСНЫЕ ЭЛЕМЕНТЫ СЛАЙДЕРА НА ЗЕЛЕНЫЕ */
-    /* 1. Активная часть полоски (вместо красного) */
-    .stSlider [data-baseweb="slider"] > div > div > div {{
-        background-color: #28a745 !important;
-    }}
-    /* 2. Сам ползунок (кружок) */
-    .stSlider [data-baseweb="slider"] div[role="slider"] {{
-        background-color: #28a745 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }}
-    /* 3. Числовое значение над ползунком */
-    .stSlider div[data-testid="stThumbValue"] {{
-        color: #28a745 !important;
-    }}
-
+    /* Убираем подсказки "Press Enter to apply" */
     [data-testid="stInputInstructions"] {{
         display: none !important;
+    }}
+    
+    /* Стили для зеленого слайдера */
+    div[data-testid="stSlider"] {{
+        accent-color: #28a745 !important;
+    }}
+    
+    div[data-testid="stSlider"] div[data-baseweb="slider"] {{
+        background-color: #28a745 !important;
+    }}
+    
+    div[data-testid="stSlider"] div[data-baseweb="slider"] div:first-child {{
+        background-color: #28a745 !important;
+    }}
+    
+    div[data-testid="stSlider"] div[role="slider"] {{
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+    }}
+    
+    div[data-testid="stSlider"] label {{
+        color: #28a745 !important;
+        font-weight: 500 !important;
     }}
     
     .logo-container {{
@@ -104,7 +113,6 @@ st.markdown(f"""
     .stButton > button, .stDownloadButton > button {{
         width: 320px !important; height: 54px !important; background-color: #28a745 !important;
         color: white !important; font-weight: 600 !important; border-radius: 8px !important;
-        border: none !important;
     }}
     .res-box {{ 
         text-align: center; background-color: #d4edda; color: #155724; 
