@@ -20,7 +20,7 @@ st.markdown("""
     .block-container { 
         max-width: 800px !important; 
         margin: 0 auto !important; 
-        padding-top: 1rem !important; /* Минимальный комфортный отступ */
+        padding-top: 1rem !important; 
     }
     
     /* Убираем стандартные отступы Streamlit для элементов управления */
@@ -50,7 +50,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 1. ШАПКА (Используем HTML класс вместо h2 для стабильности)
+# 1. ШАПКА
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
 # 2. МЕСТО ПОД ПРЕВЬЮ И РАЗРЕШЕНИЕ
@@ -94,7 +94,8 @@ c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
-with c4: logo_p = st.slider("Лого %", 0, 150, 0)
+# Установлено значение по умолчанию 60
+with c4: logo_p = st.slider("Лого %", 0, 150, 60)
 
 # ЛОГИКА ОТОБРАЖЕНИЯ
 if w_mm > 0 and h_mm > 0 and pitch > 0:
