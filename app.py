@@ -88,7 +88,7 @@ st.markdown(f"""
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
     @media (max-width: 768px) {{
-        .preview-img {{ max-height: 200px !important; }}
+        .preview-img {{ max-height: 120px !important; }}
     }}
 
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
