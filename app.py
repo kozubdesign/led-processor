@@ -53,11 +53,24 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* Убираем подсказки "Press Enter to apply" */
-    [data-testid="stInputInstructions"] {{
-        display: none !important;
-    }}
+    /* Убираем подсказки */
+    [data-testid="stInputInstructions"] {{ display: none !important; }}
     
+    /* ЗЕЛЕНАЯ ОБВОДКА ИНПУТОВ */
+    div[data-baseweb="input"] {{
+        border: 1px solid transparent !important;
+        border-radius: 8px !important;
+    }}
+    div[data-baseweb="input"]:focus-within {{
+        border-color: #28a745 !important;
+    }}
+    input {{
+        border-radius: 8px !important;
+    }}
+    /* Кастом для слайдера (тоже в зеленый) */
+    span[data-baseweb="slider-thumb"] {{ background-color: #28a745 !important; }}
+    span[data-baseweb="slider-track"] > div {{ background-image: linear-gradient(to right, #28a745, #28a745) !important; }}
+
     .logo-container {{
         display: flex;
         justify-content: center;
