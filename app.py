@@ -11,7 +11,7 @@ LOGO_PATH = "logo.png"
 SOURCE_FOLDER = "images"
 
 # ====================== НАСТРОЙКА ======================
-st.set_page_config(page_title="LED Processor", layout="wide") # Используем wide для удобства строк
+st.set_page_config(page_title="LED Processor", layout="wide") # Используем wide для строк
 
 # ====================== CSS ======================
 st.markdown("""
@@ -23,33 +23,43 @@ st.markdown("""
         padding-top: 1.5rem !important;
     }
 
-    /* Заголовок */
+    /* Заголовок увеличен в 2 раза */
     h1 {
         text-align: center !important;
-        font-size: 1.12rem !important;
+        font-size: 2.25rem !important; /* Увеличено с 1.12rem */
         margin-bottom: 25px !important; 
     }
 
-    /* Настройка полей ввода, чтобы они были компактными */
+    /* Настройка полей ввода */
     div[data-testid="stNumberInput"], 
     div[data-testid="stSlider"] {
         width: 100% !important;
     }
 
-    /* Центрирование плашки разрешения и кнопки */
+    /* Стилизация блока превью и разрешения */
+    .preview-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    /* Зеленая плашка разрешения - ширина как у превью */
+    div[data-testid="stNotification"] {
+        max-width: 600px !important; /* Ширина превью */
+        margin: 0 auto !important;
+        border-radius: 4px;
+    }
+
+    /* Центрирование кнопки */
     .centered-box {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 10px;
         margin-top: 20px;
     }
 
-    div[data-testid="stNotification"] {
-        max-width: 190px !important;
-        margin: 0 auto !important;
-    }
-
+    /* Кнопка "Скачать контент" без красной обводки */
     .stButton > button {
         background-color: #28a745 !important;
         color: white !important;
@@ -58,6 +68,8 @@ st.markdown("""
         height: 45px !important;
         width: 190px !important;
         border-radius: 6px !important;
+        border: none !important; /* Убираем обводку */
+        box-shadow: none !important; /* Убираем тени */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -65,8 +77,8 @@ st.markdown("""
 # ====================== ЗАГОЛОВОК ======================
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 
-# Контейнер для превью
-preview_container = st.container()
+# Контейнер для блока превью (самое верхнее положение)
+preview_block_container = st.container()
 
 # ====================== SESSION STATE ======================
 if 'zip_data' not in st.session_state:
@@ -108,14 +120,18 @@ with col2:
 with col3:
     pitch = st.number_input("Pitch (мм)", min_value=0, value=0, step=1, format="%d")
 with col4:
-    logo_percent = st.slider("Лого (%)", 10, 80, 45, 5)
+    # Текст изменен, начальный размер 50%
+    logo_percent = st.slider("Размер логотипа", 10, 80, 50, 5)
 
 fields_filled = w_mm > 0 and h_mm > 0 and pitch > 0
 
-# ====================== ЛОГИКА ПРЕВЬЮ ======================
+# ====================== ЛОГИКА ПРЕВЬЮ И РАЗРЕШЕНИЯ ======================
 if fields_filled:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
-    with preview_container:
+    
+    with preview_block_container:
+        st.markdown('<div class="preview-block">', unsafe_allow_html=True)
+        
         logo_img = get_processing_logo()
         bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
         if logo_img and bg_files:
@@ -124,21 +140,25 @@ if fields_filled:
                 buf = io.BytesIO()
                 preview.save(buf, format="JPEG", quality=80)
                 img_str = base64.b64encode(buf.getvalue()).decode()
+                # Отображение превью
                 st.markdown(f'''
-                    <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: center; margin-bottom: 10px;">
                         <img src="data:image/jpeg;base64,{img_str}" 
                              style="max-width: 600px; max-height: 300px; width: auto; height: auto; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     </div>
                 ''', unsafe_allow_html=True)
+        
+        # Разрешение ПОД превью, ширина как у превью
+        st.success(f"**Разрешение: {tw} × {th} px**")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# ====================== ВЫВОД И КНОПКИ ======================
+# ====================== КНОПКИ СКАЧИВАНИЯ ======================
 st.markdown('<div class="centered-box">', unsafe_allow_html=True)
 
 if fields_filled:
-    st.success(f"**{tw} × {th} px**")
-
-    if st.button("Создать ZIP", type="primary"):
+    if st.button("Скачать контент", type="primary"): # Имя изменено
         logo_img = get_processing_logo()
+        bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
         if logo_img and bg_files:
             with st.spinner("Ждите..."):
                 zip_buffer = io.BytesIO()
@@ -155,7 +175,7 @@ if fields_filled:
 
     if st.session_state.zip_data:
         st.download_button(
-            label="Скачать файл",
+            label="Сохранить ZIP файл",
             data=st.session_state.zip_data,
             file_name=st.session_state.file_name,
             mime="application/zip"
