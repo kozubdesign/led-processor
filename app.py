@@ -7,7 +7,8 @@ from PIL import Image, ImageOps
 from datetime import datetime
 
 # ====================== КОНСТАНТЫ ======================
-LOGO_PATH = "logo.png"
+LOGO_H_PATH = "logo_h.png"
+LOGO_V_PATH = "logo_v.png"
 SOURCE_FOLDER = "images"
 
 # ====================== НАСТРОЙКА ======================
@@ -46,21 +47,26 @@ def get_cached_logo(path):
             return None
     return None
 
-def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
+def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     try:
+        # Автоматический выбор логотипа в зависимости от ориентации экрана
+        active_logo = logo_h if tw >= th else logo_v
+        if not active_logo:
+            return None
+
         with Image.open(bg_path) as img:
             # 1. Подготовка фона
             img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
 
             # 2. Логика размера логотипа
-            lw, lh = logo_rgba.size
+            lw, lh = active_logo.size
             max_scale = min(tw / lw, th / lh)
             final_scale = max_scale * (user_scale_percent / 100)
             
             new_lw = max(1, int(lw * final_scale))
             new_lh = max(1, int(lh * final_scale))
             
-            logo_res = logo_rgba.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
+            logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
 
             # 3. Наложение по центру
             img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
@@ -68,7 +74,10 @@ def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     except:
         return None
 
-logo_img = get_cached_logo(LOGO_PATH)
+# Загрузка логотипов
+logo_h_img = get_cached_logo(LOGO_H_PATH)
+logo_v_img = get_cached_logo(LOGO_V_PATH)
+
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
@@ -76,17 +85,17 @@ st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
-
-# Шаг пикселя по умолчанию 0 (float), формат вывода без принудительных нулей (%g)
 with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%g")
-
 with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, 70)
 
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     
-    if logo_img and bg_files:
-        preview = process_single_image(bg_files[0], logo_img, tw, th, logo_scale)
+    # Проверка наличия нужного логотипа для текущей ориентации
+    current_logo = logo_h_img if tw >= th else logo_v_img
+    
+    if current_logo and bg_files:
+        preview = process_single_image(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
         if preview:
             buf = io.BytesIO()
             preview.save(buf, format="JPEG", quality=85)
@@ -97,6 +106,8 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
                 </div>
             ''', unsafe_allow_html=True)
             resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
+    elif not current_logo:
+        st.warning(f"Ожидается файл {'logo_h.png' if tw >= th else 'logo_v.png'} для данной ориентации экрана")
 
 st.markdown("<br>", unsafe_allow_html=True)
 button_placeholder = st.empty()
@@ -107,14 +118,14 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
         
         if not bg_files:
             st.error("Папка images пуста")
-        elif not logo_img:
-            st.error("Логотип logo.png не найден")
+        elif not (logo_h_img or logo_v_img):
+            st.error("Файлы логотипов не найдены")
         else:
             with st.spinner("Создание контента..."):
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     for f in bg_files:
-                        processed = process_single_image(f, logo_img, tw, th, logo_scale)
+                        processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
                         if processed:
                             img_byte_arr = io.BytesIO()
                             processed.save(img_byte_arr, format='JPEG', quality=95)
