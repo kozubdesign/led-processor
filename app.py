@@ -59,12 +59,14 @@ logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
+# Поля ввода теперь по нулям или пусты
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
-with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=8000, step=10)
-with col_h: h_mm = st.number_input("Высота (мм)", 0, value=4000, step=10)
-with col_p: pitch = st.number_input("Шаг (мм)", 0, value=10, step=1)
-with col_s: logo_percent = st.slider("Лого %", 0, 150, 60, 5)
+with col_w: w_mm = st.number_input("Ширина (мм)", min_value=0, value=0, step=10)
+with col_h: h_mm = st.number_input("Высота (мм)", min_value=0, value=0, step=10)
+with col_p: pitch = st.number_input("Шаг (мм)", min_value=0, value=0, step=1)
+with col_s: logo_percent = st.slider("Лого %", 0, 150, 0, 5)
 
+# Проверка: работаем только если все значения введены пользователем
 if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     
@@ -96,5 +98,8 @@ if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
         st.download_button(label="Скачать архив", data=st.session_state.zip_ready, 
                            file_name=f"LED_{datetime.now().strftime('%y%m%d')}.zip", mime="application/zip")
 else:
+    # Подсказки, чего не хватает для начала
     if not bg_files: st.error("Нет изображений в папке images")
-    if not logo_img: st.error("Файл logo.png не найден")
+    elif not logo_img: st.error("Файл logo.png не найден")
+    elif w_mm == 0 or h_mm == 0 or pitch == 0:
+        st.info("Введите параметры экрана (ширину, высоту и шаг), чтобы начать.")
