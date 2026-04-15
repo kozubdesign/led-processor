@@ -62,7 +62,7 @@ def get_cached_logo(path):
         except: return None
     return None
 
-def process_single_image(bg_path, logo_rgba, tw, th, logo_p_unused):
+def process_single_image(bg_path, logo_rgba, tw, th, user_scale_percent):
     try:
         with Image.open(bg_path) as img:
             img = img.convert("RGB")
@@ -71,14 +71,15 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_p_unused):
             img = img.resize((nw, nh), Image.Resampling.LANCZOS)
             img = img.crop(((nw - tw)//2, (nh - th)//2, (nw + tw)//2, (nh + th)//2))
             
-            # НОВАЯ ЛОГИКА: 65% ширины ИЛИ 30% высоты (выбираем меньшее)
-            limit_w = tw * 0.65
-            limit_h = th * 0.30
-            limit = int(min(limit_w, limit_h))
+            # БАЗОВОЕ ПРАВИЛО: 65% ширины или 30% высоты (что меньше)
+            base_limit = min(tw * 0.65, th * 0.30)
+            
+            # КОРРЕКТИРОВКА БЕГУНКОМ (user_scale_percent / 100)
+            final_limit = int(base_limit * (user_scale_percent / 100))
             
             lw, lh = logo_rgba.size
-            if max(lw, lh) > 0 and limit > 0:
-                scale = limit / max(lw, lh)
+            if max(lw, lh) > 0 and final_limit > 0:
+                scale = final_limit / max(lw, lh)
                 new_size = (int(lw * scale), int(lh * scale))
                 logo_res = logo_rgba.resize(new_size, Image.Resampling.LANCZOS)
                 img.paste(logo_res, ((tw - new_size[0])//2, (th - new_size[1])//2), logo_res)
@@ -89,20 +90,21 @@ logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# 3. ПОЛЯ ВВОДА (Слайдер оставил, но логика теперь зашита жестко согласно ТЗ)
+# 3. ПОЛЯ ВВОДА
 st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", 0, value=0)
-with c4: st.info("Размер лого: Авто (65% шир. / 30% выс.)")
+# Бегунок возвращен. 100% = точное соответствие твоему правилу.
+with c4: logo_scale = st.slider("Размер лого (%)", 0, 200, 100)
 
 # ЛОГИКА ОТОБРАЖЕНИЯ ПРЕВЬЮ
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
     if logo_img and bg_files:
-        preview = process_single_image(bg_files[0], logo_img, tw, th, 60)
+        preview = process_single_image(bg_files[0], logo_img, tw, th, logo_scale)
         if preview:
             buf = io.BytesIO()
             preview.save(buf, format="JPEG", quality=90)
@@ -125,7 +127,7 @@ if w_mm > 0 and h_mm > 0 and pitch > 0:
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                 for f in bg_files:
-                    processed = process_single_image(f, logo_img, tw, th, 60)
+                    processed = process_single_image(f, logo_img, tw, th, logo_scale)
                     if processed:
                         img_byte_arr = io.BytesIO()
                         processed.save(img_byte_arr, format='JPEG', quality=95)
