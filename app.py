@@ -53,23 +53,29 @@ st.markdown(f"""
     .block-container {{ max-width: 800px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
     
-    /* Убираем подсказки */
+    /* Скрываем подсказки */
     [data-testid="stInputInstructions"] {{ display: none !important; }}
     
-    /* ЗЕЛЕНАЯ ОБВОДКА ИНПУТОВ */
+    /* ЖЕСТКИЙ ПЕРЕКРАС ОБВОДКИ ИНПУТОВ */
     div[data-baseweb="input"] {{
-        border: 1px solid transparent !important;
+        border: 1px solid #d3d3d3 !important;
         border-radius: 8px !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
     }}
-    div[data-baseweb="input"]:focus-within {{
+    /* Состояние при наведении и фокусе */
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="input"]:hover {{
         border-color: #28a745 !important;
+        box-shadow: 0 0 0 1px #28a745 !important;
     }}
-    input {{
-        border-radius: 8px !important;
+    
+    /* Цвет активной части слайдера */
+    div[data-testid="stSlider"] [data-baseweb="slider-track"] > div {{
+        background: #28a745 !important;
     }}
-    /* Кастом для слайдера (тоже в зеленый) */
-    span[data-baseweb="slider-thumb"] {{ background-color: #28a745 !important; }}
-    span[data-baseweb="slider-track"] > div {{ background-image: linear-gradient(to right, #28a745, #28a745) !important; }}
+    div[data-testid="stSlider"] [data-baseweb="slider-thumb"] {{
+        background-color: #28a745 !important;
+        border: 2px solid #28a745 !important;
+    }}
 
     .logo-container {{
         display: flex;
@@ -77,7 +83,6 @@ st.markdown(f"""
         margin-top: 20px;
         margin-bottom: 20px;
     }}
-    
     .logo-img {{ width: 150px; }}
     
     @media (prefers-color-scheme: light) {{
@@ -88,7 +93,6 @@ st.markdown(f"""
         .logo-light {{ display: none; }}
         .logo-dark {{ display: block; }}
     }}
-    
     @media (max-width: 640px) {{
         .logo-img {{ width: 100px; }}
     }}
