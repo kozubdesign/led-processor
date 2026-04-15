@@ -43,7 +43,11 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-st.set_page_config(page_title="LED Generator", layout="wide")
+st.set_page_config(
+    page_title="LED Generator", 
+    page_icon="favicon.png", 
+    layout="wide"
+)
 
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
