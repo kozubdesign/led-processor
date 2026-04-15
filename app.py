@@ -151,7 +151,16 @@ with c4:
         orientation_key = "vert"
     
     # Используем динамический key, чтобы слайдер сбрасывался при смене ориентации
-    logo_scale = st.slider("Размер логотипа %", 0, 100, current_default, on_change=reset_zip, key=f"slider_{orientation_key}")
+    # Добавляем параметр step=5
+logo_scale = st.slider(
+    "Размер логотипа %", 
+    0, 
+    100, 
+    current_default, 
+    step=5,  # Вот этот параметр
+    on_change=reset_zip, 
+    key=f"slider_{orientation_key}"
+)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
