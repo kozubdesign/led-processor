@@ -214,21 +214,32 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
         btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
-    elif st.session_state.processing:
+elif st.session_state.processing:
         btn_placeholder.button("Идет генерация...", disabled=True)
+        
+        # Создаем прогресс-бар
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
         zip_buffer = io.BytesIO()
+        num_files = len(bg_files)
+        
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for f in bg_files:
-                # Для ZIP используем медленный, но качественный LANCZOS
+            for idx, f in enumerate(bg_files):
+                # Обновляем прогресс
+                percent = (idx + 1) / num_files
+                progress_bar.progress(percent)
+                status_text.text(f"Обработка: {os.path.basename(f)} ({idx+1}/{num_files})")
+                
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                 if processed:
                     img_byte_arr = io.BytesIO()
                     processed.save(img_byte_arr, format='JPEG', quality=95)
                     zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+        
+        status_text.empty()
+        progress_bar.empty()
+        
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
-    else:
-        if btn_placeholder.button("Создать контент"):
-            st.session_state.processing = True
-            st.rerun()
