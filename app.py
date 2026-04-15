@@ -22,7 +22,6 @@ st.markdown("""
         padding-top: 2rem !important;
     }
 
-    /* Заголовок уменьшен в 1.5 раза (с ~2.25rem до 1.5rem) */
     .main-title { 
         text-align: center !important; 
         margin-bottom: 20px !important;
@@ -30,42 +29,56 @@ st.markdown("""
         font-weight: bold;
     }
 
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {
-        display: flex !important;
-        justify-content: center !important;
-        width: 100% !important;
-    }
-
+    /* Стили для основных кнопок (зеленые) */
     .stButton > button, .stDownloadButton > button {
-        width: 320px !important;
+        width: 100% !important;
         height: 54px !important;
         background-color: #28a745 !important;
         color: white !important;
         font-weight: 600 !important;
         border-radius: 8px !important;
         border: none !important;
+        margin-top: 10px;
     }
     
     .stButton > button:hover, .stDownloadButton > button:hover {
         background-color: #218838 !important;
+        color: white !important;
+    }
+
+    /* Стиль для кнопки сброса (красная/второстепенная) */
+    div.reset-btn > div.stButton > button {
+        background-color: #dc3545 !important;
+        height: 40px !important;
+        font-size: 0.8rem !important;
+        margin-bottom: 20px;
+    }
+    div.reset-btn > div.stButton > button:hover {
+        background-color: #c82333 !important;
     }
 
     div[data-testid="stNotification"] {
         max-width: 600px !important;
         margin: 10px auto !important;
     }
-    div[data-testid="stNotification"] div[role="alert"] {
-        justify-content: center !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
+# ====================== ФУНКЦИИ ======================
 @st.cache_resource
 def get_cached_logo(path):
     if os.path.exists(path):
         try: return Image.open(path).convert("RGBA")
         except: return None
     return None
+
+def reset_fields():
+    """Сброс всех полей к значениям по умолчанию"""
+    st.session_state["w_mm"] = 8000
+    st.session_state["h_mm"] = 4000
+    st.session_state["pitch"] = 10
+    st.session_state["logo_percent"] = 60
+    st.session_state.zip_ready = None
 
 def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
     try:
@@ -86,19 +99,30 @@ def process_single_image(bg_path, logo_rgba, tw, th, logo_percent):
             return img
     except: return None
 
+# ====================== ИНИЦИАЛИЗАЦИЯ СОСТОЯНИЯ ======================
+if "w_mm" not in st.session_state:
+    reset_fields()
+
 # ====================== ИНТЕРФЕЙС ======================
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
+
+# Кнопка сброса (в отдельном контейнере для стилизации)
+st.markdown('<div class="reset-btn">', unsafe_allow_html=True)
+if st.button("Сбросить все настройки"):
+    reset_fields()
+    st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
 logo_img = get_cached_logo(LOGO_PATH)
 bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
 
-# Ввод данных с дефолтными значениями
+# Ввод данных с использованием Session State
 col_w, col_h, col_p, col_s = st.columns([1, 1, 1, 2])
-with col_w: w_mm = st.number_input("Ширина (мм)", 0, value=8000, step=10)
-with col_h: h_mm = st.number_input("Высота (мм)", 0, value=4000, step=10)
-with col_p: pitch = st.number_input("Шаг (мм)", 0, value=10, step=1)
-with col_s: logo_percent = st.slider("Лого %", 0, 150, 60, 5)
+with col_w: w_mm = st.number_input("Ширина (мм)", 0, step=10, key="w_mm")
+with col_h: h_mm = st.number_input("Высота (мм)", 0, step=10, key="h_mm")
+with col_p: pitch = st.number_input("Шаг (мм)", 0, step=1, key="pitch")
+with col_s: logo_percent = st.slider("Лого %", 0, 150, step=5, key="logo_percent")
 
 if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
@@ -117,10 +141,8 @@ if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
     
     st.success(f"**Разрешение: {tw} × {th} px**")
 
-    if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
-
     if st.button("Генерировать контент"):
-        with st.spinner("Сборка..."):
+        with st.spinner("Обработка всех изображений..."):
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                 for i, path in enumerate(bg_files):
@@ -134,11 +156,12 @@ if w_mm > 0 and h_mm > 0 and pitch > 0 and logo_img and bg_files:
 
     if st.session_state.zip_ready:
         st.download_button(
-            label="Скачать архив",
+            label="⬇️ Скачать архив",
             data=st.session_state.zip_ready,
-            file_name=f"LED_{datetime.now().strftime('%y%m%d')}.zip",
+            file_name=f"LED_{datetime.now().strftime('%y%m%d_%H%M')}.zip",
             mime="application/zip"
         )
 else:
-    if not bg_files: st.error("Нет изображений в папке images")
-    if not logo_img: st.error("Файл logo.png не найден")
+    if not bg_files: st.error(f"Папка '{SOURCE_FOLDER}' пуста или не найдена.")
+    if not logo_img: st.error(f"Файл '{LOGO_PATH}' не найден.")
+    if pitch == 0: st.warning("Шаг пикселя должен быть больше 0.")
