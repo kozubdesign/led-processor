@@ -42,15 +42,17 @@ st.markdown("""
     [data-testid="stHeader"] { display: none; }
     .main-title { text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }
     
-    /* Одинаковая ширина колонок и слайдера на мобилках */
-    [data-testid="column"], [data-testid="stSlider"] { 
-        width: 100% !important; 
-        flex: 1 1 0% !important; 
-        min-width: 0px !important; 
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+    /* Принудительное выравнивание ширины для всех виджетов */
+    .stNumberInput, .stSlider {
+        width: 100% !important;
     }
     
+    /* Убираем лишние отступы у колонок на мобилках */
+    [data-testid="column"] {
+        padding-left: 0rem !important;
+        padding-right: 0rem !important;
+    }
+
     div.stButton, div.stDownloadButton, div.element-container:has(button) {
         display: flex !important; justify-content: center !important; width: 100% !important;
     }
@@ -78,7 +80,7 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Поля ввода
+# Единая сетка для всех контролов
 c1, c2, c3 = st.columns(3)
 with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
@@ -88,9 +90,11 @@ tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
 
-# Слайдер (теперь с CSS-адаптацией под ширину полей)
+# Помещаем слайдер в отдельную колонку на всю ширину, чтобы он наследовал поведение сетки
+cs = st.columns(1)[0]
 default_scale = 50 if tw >= th else 40
-logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
+with cs:
+    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale)
