@@ -56,19 +56,32 @@ st.markdown(f"""
     /* Скрываем подсказки */
     [data-testid="stInputInstructions"] {{ display: none !important; }}
     
-    /* ЖЕСТКИЙ ПЕРЕКРАС ОБВОДКИ ИНПУТОВ */
+    /* ПОЛНОЕ ПЕРЕОПРЕДЕЛЕНИЕ ОБВОДКИ */
     div[data-baseweb="input"] {{
         border: 1px solid #d3d3d3 !important;
         border-radius: 8px !important;
-        transition: border-color 0.2s, box-shadow 0.2s !important;
-    }}
-    /* Состояние при наведении и фокусе */
-    div[data-baseweb="input"]:focus-within, div[data-baseweb="input"]:hover {{
-        border-color: #28a745 !important;
-        box-shadow: 0 0 0 1px #28a745 !important;
     }}
     
-    /* Цвет активной части слайдера */
+    /* Убираем красную/системную обводку при фокусе */
+    div[data-baseweb="input"]:focus-within {{
+        border-color: #28a745 !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }}
+
+    /* Убираем внешнюю рамку Streamlit, которая бывает красной */
+    div[data-baseweb="input"] > div {{
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }}
+
+    /* Состояние при наведении */
+    div[data-baseweb="input"]:hover {{
+        border-color: #28a745 !important;
+    }}
+    
+    /* Слайдер в зеленый */
     div[data-testid="stSlider"] [data-baseweb="slider-track"] > div {{
         background: #28a745 !important;
     }}
