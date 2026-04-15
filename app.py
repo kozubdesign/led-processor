@@ -65,50 +65,57 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-st.set_page_config(page_title="LEDsi Генератор контента", layout="wide", page_icon="favicon.png")
+st.set_page_config(page_title="LEDsi Генератор", layout="wide", page_icon="favicon.png")
 
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
-    /* УБИРАЕМ КНОПКИ +/- */
+    /* УДАЛЕНИЕ КНОПОК +/- */
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
     input[type=number] {{ -moz-appearance: textfield !important; }}
 
+    /* КОНТЕЙНЕР И КОЛОНКИ */
     .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    
     [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
-    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
-
-    .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
-    .logo-img {{ width: 100px; }}
     
-    /* СТИЛИ ПРЕВЬЮ */
+    /* ИНПУТЫ И ЛЕЙБЛЫ В ОДНУ СТРОКУ */
+    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], div[data-testid="stSlider"] {{
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }}
+    
+    div[data-testid="stNumberInput"] label, 
+    div[data-testid="stTextInput"] label,
+    div[data-testid="stSlider"] label {{
+        margin-bottom: 0 !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        font-size: 0.85rem !important;
+    }}
+
+    /* ПРЕВЬЮ */
+    .logo-container {{ display: flex; justify-content: center; margin: 5px 0; }}
+    .logo-img {{ width: 80px; }}
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
     @media (max-width: 768px) {{
         .preview-img {{ max-height: 200px !important; }}
+        div[data-testid="stNumberInput"] label, div[data-testid="stTextInput"] label {{ font-size: 0.75rem !important; }}
     }}
 
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
-    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
-        content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 10px;
-        vertical-align: middle; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1);
-        border-top-color: #28a745; animation: spin 0.8s linear infinite;
-    }}
+    .main-title {{ text-align: center; font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; }}
+    .res-box {{ width: 100%; text-align: center; background-color: #d4edda; color: #155724; padding: 6px; border-radius: 8px; margin: 5px 0; font-size: 0.8rem; }}
     
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
-    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
-    .stButton > button, .stDownloadButton > button {{ width: 320px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
-    
-    .res-box {{ width: 100%; text-align: center; background-color: #d4edda; color: #155724; padding: 8px; border-radius: 8px; margin: 8px 0; font-weight: 400; font-size: 0.8rem; }}
+    div.stButton, div.stDownloadButton {{ display: flex !important; justify-content: center !important; }}
+    .stButton > button, .stDownloadButton > button {{ width: 280px !important; height: 48px !important; font-weight: 600 !important; }}
     </style>
+    
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
@@ -126,10 +133,11 @@ logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-c1, c2, c3, c4 = st.columns([1, 1, 1, 1.8])
-with c1: w_mm = st.number_input("Ширина", 0, value=0, on_change=reset_zip)
-with c2: h_mm = st.number_input("Высота", 0, value=0, on_change=reset_zip)
-with c3: pitch_str = st.text_input("Шаг", value="0", on_change=reset_zip)
+# РЯД ЭЛЕМЕНТОВ
+c1, c2, c3, c4 = st.columns([1, 1, 1.1, 1.9])
+with c1: w_mm = st.number_input("W", 0, value=0, on_change=reset_zip)
+with c2: h_mm = st.number_input("H", 0, value=0, on_change=reset_zip)
+with c3: pitch_str = st.text_input("Pitch", value="0", on_change=reset_zip)
 
 tw, th = 0, 0
 pitch_x, pitch_y = 0.0, 0.0
@@ -147,7 +155,7 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 with c4:
     default_scale = 50 if tw >= th else 40
-    logo_scale = st.slider("Лого %", 0, 100, default_scale, on_change=reset_zip)
+    logo_scale = st.slider("Logo %", 0, 100, default_scale, on_change=reset_zip)
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
@@ -156,29 +164,28 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         preview.save(buf, format="JPEG", quality=75)
         img_str = base64.b64encode(buf.getvalue()).decode()
         preview_placeholder.markdown(f'''
-            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: center; margin-bottom: 8px;">
                 <img class="preview-img" src="data:image/jpeg;base64,{img_str}">
             </div>
         ''', unsafe_allow_html=True)
-        res_label = "Разрешение медиафасада" if is_asymmetric else "Разрешение экрана"
+        res_label = "Медиафасад" if is_asymmetric else "Экран"
         resolution_placeholder.markdown(f"<div class='res-box'>{res_label}: {tw} × {th} px</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# БЛОК КНОПОК
+# КНОПКИ
 action_placeholder = st.empty()
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        action_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
+        action_placeholder.download_button(label="Скачать архив", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip", type="primary")
     elif st.session_state.processing:
         zip_buffer = io.BytesIO()
-        total_files = len(bg_files)
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for i, f in enumerate(bg_files):
-                percent = int(((i + 1) / total_files) * 100)
-                action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"btn_proc_{i}")
+                percent = int(((i + 1) / len(bg_files)) * 100)
+                action_placeholder.button(f"Создание... {percent}%", disabled=True, key=f"p_{i}")
                 processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                 if processed:
                     img_byte_arr = io.BytesIO()
