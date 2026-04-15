@@ -6,7 +6,7 @@ import base64
 from PIL import Image, ImageOps
 from datetime import datetime
 
-# ====================== ФУНКЦИИ ОБРАБОТКИ ======================
+# ====================== ФУНКЦИИ ======================
 @st.cache_resource
 def get_cached_logo(path):
     if os.path.exists(path):
@@ -41,11 +41,10 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
             return img.resize((tw, th), Image.Resampling.LANCZOS)
     except: return None
 
-# ====================== UI И СТИЛИ ======================
+# ====================== НАСТРОЙКА UI ======================
 st.set_page_config(page_title="LEDsi Генератор контента", layout="wide", page_icon="favicon.png")
 
 logo_black_base64 = get_base64_img("logo_black.png")
-logo_h_base64 = get_base64_img("logo_h.png")
 
 st.markdown(f"""
     <style>
@@ -54,20 +53,12 @@ st.markdown(f"""
     
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 
-    /* СТИЛЬ КНОПКИ ГЕНЕРАЦИИ (ЗЕЛЕНАЯ) */
-    .stButton > button {{
-        width: 100% !important; height: 54px !important; background-color: #28a745 !important;
-        color: white !important; font-weight: bold !important; border-radius: 8px !important;
+    .stButton > button, .stDownloadButton > button {{
+        width: 320px !important; height: 54px !important; background-color: #28a745 !important;
+        color: white !important; font-weight: 600 !important; border-radius: 8px !important;
+        border: none !important;
     }}
 
-    /* СТИЛЬ КНОПКИ СКАЧИВАНИЯ (СИНЯЯ - ЧТОБЫ ЗАМЕТИТЬ) */
-    .stDownloadButton > button {{
-        width: 100% !important; height: 60px !important; background-color: #007bff !important;
-        color: white !important; font-weight: 800 !important; border-radius: 8px !important;
-        border: 2px solid #0056b3 !important; font-size: 1.2rem !important;
-    }}
-
-    /* iOS СПИННЕР */
     button[disabled] p::before {{
         content: ""; display: inline-block; width: 20px; height: 20px;
         margin-right: 12px; vertical-align: middle; border-radius: 50%;
@@ -83,29 +74,26 @@ st.markdown(f"""
     }}
     </style>
     
-    <div style="text-align:center; margin-bottom:20px;">
-        <img src="data:image/png;base64,{logo_h_base64}" style="width:150px;">
+    <div style="text-align:center;">
+        <img src="data:image/png;base64,{logo_black_base64}" style="width:150px;">
         <h2 style="margin-top:10px;">Генератор контента</h2>
     </div>
     """, unsafe_allow_html=True)
 
-# ====================== ЛОГИКА ПРИЛОЖЕНИЯ ======================
+# ====================== ЛОГИКА ======================
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
 
-# Загрузка ресурсов
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") 
             if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
-# Ввод параметров
 c1, c2, c3 = st.columns(3)
-with c1: w_mm = st.number_input("Ширина (мм)", 0, value=8000)
-with c2: h_mm = st.number_input("Высота (мм)", 0, value=6000)
-with c3: pitch_str = st.text_input("Шаг (мм)", value="16/32")
+with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
+with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
+with c3: pitch_str = st.text_input("Шаг (мм)", value="0")
 
-# Расчет разрешения
 tw, th, pitch_x, pitch_y = 0, 0, 0.0, 0.0
 try:
     if "/" in pitch_str:
@@ -119,37 +107,20 @@ except: pass
 
 logo_scale = st.slider("Размер лого (%)", 0, 100, 50)
 
-# Превью и разрешение
-if tw > 0 and bg_files:
+if tw > 0:
     st.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
-    st.info(f"Найдено изображений в папке: {len(bg_files)}")
 
-st.markdown("---")
-btn_container = st.empty()
+st.markdown("<br>", unsafe_allow_html=True)
+btn_placeholder = st.empty()
 
-# ЛОГИКА КНОПОК
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
-    # 1. Если архив готов — показываем БОЛЬШУЮ СИНЮЮ КНОПКУ
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        st.download_button(
-            label="🚀 СКАЧАТЬ ГОТОВЫЙ АРХИВ", 
-            data=st.session_state.zip_ready, 
-            file_name=zip_filename, 
-            mime="application/zip",
-            key="download_btn"
-        )
-        if st.button("♻️ Создать заново"):
-            st.session_state.zip_ready = None
-            st.rerun()
-
-    # 2. Если в процессе — крутим спиннер и бар
+        btn_placeholder.download_button(label="Скачать", data=st.session_state.zip_ready, file_name=zip_filename, mime="application/zip")
     elif st.session_state.processing:
-        btn_container.button("Генерация...", disabled=True)
+        btn_placeholder.button("Идет генерация...", disabled=True)
         bar = st.progress(0)
-        status = st.empty()
-        
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for i, f in enumerate(bg_files):
@@ -159,15 +130,10 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
                     processed.save(img_io, format='JPEG', quality=95)
                     zip_file.writestr(os.path.basename(f), img_io.getvalue())
                 bar.progress((i + 1) / len(bg_files))
-                status.center(f"Обработка: {i+1} из {len(bg_files)}")
-        
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
-
-    # 3. Исходное состояние
     else:
-        if btn_container.button("Сгенерировать контент"):
-            st.session_state.zip_ready = None
+        if btn_placeholder.button("Сгенерировать контент"):
             st.session_state.processing = True
             st.rerun()
