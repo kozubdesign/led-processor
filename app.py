@@ -57,7 +57,27 @@ st.markdown(f"""
     [data-testid="stInputInstructions"] {{
         display: none !important;
     }}
+
+    /* --- ИЗМЕНЕНИЯ ЦВЕТА СЛАЙДЕРА --- */
     
+    /* Полоса слева от ползунка (активная зона) */
+    div[data-baseweb="slider"] > div > div > div:nth-child(1) {{
+        background: #28a745 !important;
+    }}
+    
+    /* Сам ползунок (круг) */
+    div[data-baseweb="slider"] > div > div > div > div {{
+        background-color: #28a745 !important;
+    }}
+
+    /* Цвет цифр над ползунком */
+    div[data-testid="stThumbValue"] {{
+        color: black !important;
+        font-weight: bold;
+    }}
+    
+    /* ------------------------------- */
+
     .logo-container {{
         display: flex;
         justify-content: center;
