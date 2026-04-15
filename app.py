@@ -59,7 +59,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>Контент для LED-экрана</div>", unsafe_allow_html=True)
 
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
 if 'processing' not in st.session_state: st.session_state.processing = False
