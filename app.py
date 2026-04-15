@@ -17,19 +17,20 @@ if os.path.exists(FAVICON_PATH):
 else:
     st.set_page_config(page_title="LED Processor", layout="centered")
 
-# ====================== CSS ======================
+# ====================== CSS — ЖЁСТКАЯ ЦЕНТРОВКА ======================
 st.markdown("""
     <style>
     .block-container {
-        max-width: 740px !important;
+        max-width: 720px !important;
         margin: 0 auto !important;
         padding-top: 2rem !important;
     }
 
+    /* Логотип по центру */
     .main-logo {
-        display: block;
-        margin: 0 auto 25px auto;
-        height: 65px;
+        display: block !important;
+        margin: 0 auto 25px auto !important;
+        height: 68px;
         object-fit: contain;
     }
 
@@ -49,23 +50,26 @@ st.markdown("""
     .params-title {
         text-align: center !important;
         font-size: 1.35rem;
-        margin: 25px 0 20px 0;
+        margin: 30px 0 22px 0;
     }
 
+    /* Поля ввода по центру */
     div[data-testid="stNumberInput"] {
-        margin: 0 auto 14px auto !important;
-        max-width: 340px !important;
+        margin: 0 auto 16px auto !important;
+        max-width: 380px !important;
     }
 
     .step-input {
         max-width: 220px !important;
-        margin: 0 auto 30px auto !important;
+        margin: 0 auto 32px auto !important;
     }
 
+    /* Кнопка строго по центру */
     .stButton {
         display: flex !important;
         justify-content: center !important;
-        margin-top: 20px !important;
+        width: 100% !important;
+        margin-top: 15px !important;
     }
     .stButton > button {
         background-color: #28a745 !important;
@@ -91,7 +95,7 @@ is_dark = st.get_option("theme.base") == "dark"
 header_logo = LOGO_PATH if is_dark else LOGO_BLACK_PATH
 
 if os.path.exists(header_logo):
-    st.image(header_logo, use_container_width=False, width=180)
+    st.image(header_logo, use_container_width=False, width=180, clamp=True)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
@@ -161,11 +165,8 @@ with st.sidebar:
 # ====================== ПАРАМЕТРЫ ======================
 st.markdown('<p class="params-title">Параметры экрана</p>', unsafe_allow_html=True)
 
-c1, c2 = st.columns(2)
-with c1:
-    w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
-with c2:
-    h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
+w_mm = st.number_input("Ширина экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
+h_mm = st.number_input("Высота экрана (мм)", min_value=0, max_value=9999999, value=0, step=10)
 
 pitch = st.number_input("Шаг пикселя (мм)", 
                        min_value=0.0, 
@@ -197,7 +198,7 @@ if st.button("🚀 Создать архив с контентом", type="prima
     if fields_filled:
         logo_img = get_processing_logo()
         if logo_img:
-            with st.spinner("Обработка изображений..."):
+            with st.spinner("Обработка..."):
                 bg_files = [f for f in os.listdir(SOURCE_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
                 if bg_files:
                     zip_buffer = io.BytesIO()
