@@ -5,30 +5,36 @@ import os
 import base64
 from PIL import Image, ImageOps
 
-# ====================== ФУНКЦИИ ПОИСКА ФАЙЛОВ ======================
+# ====================== ФУНКЦИИ ======================
 def find_file_case_insensitive(filename):
-    if os.path.exists(filename):
-        return filename
+    if os.path.exists(filename): return filename
     current_dir = os.listdir('.')
     for f in current_dir:
-        if f.lower() == filename.lower():
-            return f
+        if f.lower() == filename.lower(): return f
     return None
 
 @st.cache_resource
 def get_cached_logo(path):
     found_path = find_file_case_insensitive(path)
     if found_path:
-        try:
-            return Image.open(found_path).convert("RGBA")
-        except:
-            return None
+        try: return Image.open(found_path).convert("RGBA")
+        except: return None
     return None
 
-# ====================== КОНСТАНТЫ ======================
-LOGO_H_PATH = "logo_h.png"
-LOGO_V_PATH = "logo_v.png"
-SOURCE_FOLDER = "images"
+def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
+    try:
+        active_logo = logo_h if tw >= th else logo_v
+        if not active_logo: return None
+        with Image.open(bg_path) as img:
+            img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
+            lw, lh = active_logo.size
+            max_scale = min(tw / lw, th / lh)
+            final_scale = max_scale * (user_scale_percent / 100)
+            new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
+            logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
+            img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
+            return img
+    except: return None
 
 # ====================== НАСТРОЙКА ======================
 st.set_page_config(page_title="LED Processor", layout="wide")
@@ -54,30 +60,17 @@ st.markdown("""
 
 st.markdown("<div class='main-title'>Создать контент для LED-экрана</div>", unsafe_allow_html=True)
 
-# Плейсхолдеры для превью и разрешения (они не будут пропадать)
+# Инициализация состояния
+if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
+if 'processing' not in st.session_state: st.session_state.processing = False
+
 preview_placeholder = st.empty()
 resolution_placeholder = st.empty()
 
-def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent):
-    try:
-        active_logo = logo_h if tw >= th else logo_v
-        if not active_logo: return None
-
-        with Image.open(bg_path) as img:
-            img = ImageOps.fit(img.convert("RGB"), (tw, th), Image.Resampling.LANCZOS)
-            lw, lh = active_logo.size
-            max_scale = min(tw / lw, th / lh)
-            final_scale = max_scale * (user_scale_percent / 100)
-            new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
-            logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
-            img.paste(logo_res, ((tw - new_lw)//2, (th - new_lh)//2), logo_res)
-            return img
-    except: return None
-
-logo_h_img = get_cached_logo(LOGO_H_PATH)
-logo_v_img = get_cached_logo(LOGO_V_PATH)
-bg_files = [os.path.join(SOURCE_FOLDER, f) for f in os.listdir(SOURCE_FOLDER) 
-            if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SOURCE_FOLDER) else []
+logo_h_img = get_cached_logo("logo_h.png")
+logo_v_img = get_cached_logo("logo_v.png")
+bg_files = [os.path.join("images", f) for f in os.listdir("images") 
+            if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 
 st.markdown("---")
 c1, c2, c3, c4 = st.columns([1, 1, 1, 2])
@@ -85,19 +78,20 @@ with c1: w_mm = st.number_input("Ширина (мм)", 0, value=0)
 with c2: h_mm = st.number_input("Высота (мм)", 0, value=0)
 with c3: pitch = st.number_input("Шаг (мм)", min_value=0.0, value=0.0, step=0.1, format="%g")
 
-# Рассчитываем разрешение
 tw, th = 0, 0
 if w_mm > 0 and h_mm > 0 and pitch > 0:
     tw, th = int(round(w_mm / pitch)), int(round(h_mm / pitch))
 
-# Установка значения по умолчанию
 default_scale = 50 if tw >= th else 40
+with c4: logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
 
-with c4: 
-    logo_scale = st.slider("Размер лого (%)", 0, 100, default_scale)
+# Сброс архива при изменении параметров
+def reset_zip(): 
+    st.session_state.zip_ready = None
+    st.session_state.processing = False
 
-# Отображение превью (всегда активно, если введены данные)
-if tw > 0 and th > 0:
+# Если параметры изменились — сбрасываем готовность скачивания
+if tw > 0:
     is_hor = tw >= th
     current_logo = logo_h_img if is_hor else logo_v_img
     
@@ -113,34 +107,40 @@ if tw > 0 and th > 0:
                 </div>
             ''', unsafe_allow_html=True)
             resolution_placeholder.markdown(f"<div class='res-box'>Разрешение: {tw} × {th} px</div>", unsafe_allow_html=True)
-    elif not current_logo:
-        target_file = LOGO_H_PATH if is_hor else LOGO_V_PATH
-        st.error(f"Файл {target_file} не найден!")
 
 st.markdown("<br>", unsafe_allow_html=True)
+btn_placeholder = st.empty()
 
-# Управление кнопками
-button_container = st.empty()
-
-if tw > 0 and th > 0 and current_logo and bg_files:
-    # Состояние кнопки в зависимости от сессии
-    if button_container.button("Создать контент"):
-        # 1. Кнопка исчезает, появляется значок работы
-        with button_container:
-            with st.spinner("Создание контента..."):
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                    for f in bg_files:
-                        processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
-                        if processed:
-                            img_byte_arr = io.BytesIO()
-                            processed.save(img_byte_arr, format='JPEG', quality=95)
-                            zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
-                
-                # 2. По завершении spinner исчезает, появляется кнопка скачивания
-                st.download_button(
-                    label="📥 Скачать контент", 
-                    data=zip_buffer.getvalue(),
-                    file_name=f"led_{tw}x{th}.zip", 
-                    mime="application/zip"
-                )
+if tw > 0 and current_logo and bg_files:
+    # ЛОГИКА КНОПКИ:
+    if st.session_state.zip_ready:
+        # Этап 3: Показываем кнопку скачивания
+        btn_placeholder.download_button(
+            label="📥 Скачать контент",
+            data=st.session_state.zip_ready,
+            file_name=f"led_{tw}x{th}.zip",
+            mime="application/zip",
+            on_click=reset_zip # Сброс после скачивания
+        )
+    elif st.session_state.processing:
+        # Этап 2: Текст во время работы
+        btn_placeholder.button("⏳ Создание...", disabled=True)
+        
+        # Сама работа
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for f in bg_files:
+                processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale)
+                if processed:
+                    img_byte_arr = io.BytesIO()
+                    processed.save(img_byte_arr, format='JPEG', quality=95)
+                    zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+        
+        st.session_state.zip_ready = zip_buffer.getvalue()
+        st.session_state.processing = False
+        st.rerun()
+    else:
+        # Этап 1: Обычная кнопка
+        if btn_placeholder.button("Создать контент"):
+            st.session_state.processing = True
+            st.rerun()
