@@ -141,15 +141,17 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
     tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
 
 with c4:
-    # ИСПРАВЛЕННАЯ ЛОГИКА:
-    # Если ширина (tw) больше или равна высоте (th) — это горизонтальный экран (35%)
-    # Если высота больше — это вертикальный экран (50%)
-    if tw >= th:
-        default_scale = 35
+    # Определяем ориентацию для выбора дефолтного значения
+    # Если ширина >= высота — 35%, иначе — 50%
+    if tw >= th and tw > 0:
+        current_default = 35
+        orientation_key = "horiz"
     else:
-        default_scale = 50
+        current_default = 50
+        orientation_key = "vert"
     
-    logo_scale = st.slider("Лого %", 0, 100, default_scale, key="logo_slider", on_change=reset_zip)
+    # Используем динамический key, чтобы слайдер сбрасывался при смене ориентации
+    logo_scale = st.slider("Лого %", 0, 100, current_default, on_change=reset_zip, key=f"slider_{orientation_key}")
 
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
