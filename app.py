@@ -65,7 +65,7 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
     except: return None
 
 # ====================== НАСТРОЙКА UI ======================
-st.set_page_config(page_title="LEDsi AI Генератор контента", layout="wide", page_icon="favicon.png")
+st.set_page_config(page_title="LEDsi Генератор контента", layout="wide", page_icon="favicon.png")
 
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
@@ -135,7 +135,7 @@ st.markdown(f"""
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
         <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
     </div>
-    <div class='main-title'>Генератор контента</div>
+    <div class='main-title'>AI Генератор контента</div>
     """, unsafe_allow_html=True)
 
 if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
