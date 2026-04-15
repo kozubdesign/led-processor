@@ -110,7 +110,8 @@ header_logo = LOGO_PATH if is_dark else LOGO_BLACK_PATH
 if os.path.exists(header_logo):
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image(header_logo, width=None)  # width=None чтобы CSS контролировал размер
+        # Убираем параметр width, CSS контролирует размер через height
+        st.image(header_logo)
 
 st.markdown("<h1>Создать контент для LED-экрана</h1>", unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Введите параметры экрана, чтобы увидеть превью</p>', unsafe_allow_html=True)
@@ -240,6 +241,7 @@ with col2:
                         st.session_state.file_name = f"Контент на экран {year} {month} {day}.zip"
                         
                         st.success("✅ Архив создан!")
+                        st.rerun()  # Перезапускаем для отображения кнопки скачивания
         else:
             st.warning("Заполните все параметры экрана")
 
