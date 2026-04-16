@@ -4,7 +4,7 @@ import io
 import os
 import base64
 from PIL import Image, ImageOps
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ====================== ФУНКЦИИ ======================
 @st.cache_resource
@@ -70,6 +70,9 @@ st.set_page_config(page_title="LEDsi Генератор контента", layou
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
 
+# Расчет вчерашней даты
+yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
+
 st.markdown(f"""
     <style>
     div[data-testid="stNumberInput"] button {{ display: none !important; }}
@@ -87,8 +90,31 @@ st.markdown(f"""
     
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     
+    .preview-placeholder {{
+        width: 100%;
+        height: 250px;
+        background-color: #f8f9fa;
+        border: 2px dashed #dce0e4;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+        font-weight: 500;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }}
+
+    .version-text {{
+        text-align: center;
+        color: #bdc3c7;
+        font-size: 0.8rem;
+        margin-top: 15px;
+    }}
+
     @media (max-width: 768px) {{
-        .preview-img {{ max-height: 200px !important; }}
+        .preview-img, .preview-placeholder {{ max-height: 200px !important; }}
     }}
 
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
@@ -168,6 +194,12 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
                 <img class="preview-img" src="data:image/jpeg;base64,{img_str}">
             </div>
         ''', unsafe_allow_html=True)
+else:
+    preview_placeholder.markdown('''
+        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+            <div class="preview-placeholder">Тут будет превью</div>
+        </div>
+    ''', unsafe_allow_html=True)
 
 # ====================== БЛОК КНОПОК ======================
 st.markdown("<br>", unsafe_allow_html=True)
@@ -179,7 +211,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     if st.session_state.zip_ready:
         current_date = datetime.now().strftime("%y_%m_%d")
         zip_filename = f"{tw}x{th}_{current_date}.zip"
-        # Текст на кнопке изменен на "Скачать архив"
         action_placeholder.download_button(
             label="Скачать архив", 
             data=st.session_state.zip_ready, 
@@ -206,3 +237,6 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
         if action_placeholder.button(f"Создать контент {res_text}", type="primary"):
             st.session_state.processing = True
             st.rerun()
+
+# Подпись под кнопкой
+st.markdown(f'<div class="version-text">Версия 0.0.81. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
