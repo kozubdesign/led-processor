@@ -168,10 +168,10 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 
 with c4:
     if tw >= th and tw > 0:
-        current_default = 35   # было 40
+        current_default = 40 
         orientation_key = "horiz"
     else:
-        current_default = 45   # было 50
+        current_default = 50
         orientation_key = "vert"
    
     logo_scale = st.slider(
