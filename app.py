@@ -8,7 +8,7 @@ from PIL import Image, ImageOps
 from datetime import datetime, timedelta
 from moviepy.editor import VideoFileClip, CompositeVideoClip, ImageClip
 
-# ====================== ФУНКЦИИ ======================
+# ====================== ФУНКЦИИ ОБРАБОТКИ ======================
 @st.cache_resource
 def get_cached_logo(path):
     if os.path.exists(path):
@@ -28,88 +28,86 @@ def get_base64_img(path):
 def reset_zip():
     st.session_state.zip_ready = None
     st.session_state.video_zip_ready = None
+    st.session_state.processing = False
+    st.session_state.video_processing = False
 
-@st.cache_data(show_spinner=False)
-def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent, w_mm, h_mm):
-    try:
-        active_logo = _logo_h if tw >= th else _logo_v
-        if not active_logo: return None
-        with Image.open(bg_path) as img:
-            img.draft("RGB", (tw, th)) 
-            temp_aspect = w_mm / h_mm
-            temp_h = 1000 
-            temp_w = int(temp_h * temp_aspect)
-            img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.BILINEAR)
-            lw, lh = active_logo.size
-            max_scale = min(temp_w / lw, temp_h / lh)
-            final_scale = max_scale * (user_scale_percent / 100)
-            new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
-            logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.BILINEAR)
-            img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
-            return img.resize((tw, th), Image.Resampling.BILINEAR)
-    except: return None
+def process_images_logic(bg_files, logo_h, logo_v, tw, th, scale, w_mm, h_mm):
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        progress_bar = st.progress(0)
+        for i, f in enumerate(bg_files):
+            # Вызов вашей функции обработки из старого кода
+            active_logo = logo_h if tw >= th else logo_v
+            with Image.open(f) as img:
+                temp_aspect = w_mm / h_mm
+                temp_h = 1200
+                temp_w = int(temp_h * temp_aspect)
+                img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.LANCZOS)
+                lw, lh = active_logo.size
+                max_scale = min(temp_w / lw, temp_h / lh)
+                final_scale = max_scale * (scale / 100)
+                new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
+                logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
+                img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
+                final_img = img.resize((tw, th), Image.Resampling.LANCZOS)
+                
+                img_io = io.BytesIO()
+                final_img.save(img_io, format='JPEG', quality=95)
+                zf.writestr(os.path.basename(f), img_io.getvalue())
+            progress_bar.progress((i + 1) / len(bg_files))
+    return zip_buf.getvalue()
 
-def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_mm, h_mm):
-    try:
-        active_logo = logo_h if tw >= th else logo_v
-        if not active_logo: return None
-        with Image.open(bg_path) as img:
-            temp_aspect = w_mm / h_mm
-            temp_h = 1200
-            temp_w = int(temp_h * temp_aspect)
-            img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.LANCZOS)
-            lw, lh = active_logo.size
-            max_scale = min(temp_w / lw, temp_h / lh)
-            final_scale = max_scale * (user_scale_percent / 100)
-            new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
-            logo_res = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
-            img.paste(logo_res, ((temp_w - new_lw)//2, (temp_h - new_lh)//2), logo_res)
-            return img.resize((tw, th), Image.Resampling.LANCZOS)
-    except: return None
-
-def process_single_video(video_path, logo_h, logo_v, tw, th, user_scale_percent):
-    try:
-        clip = VideoFileClip(video_path)
-        target_ratio = tw / th
-        clip_ratio = clip.w / clip.h
-
-        if clip_ratio > target_ratio:
-            new_w = int(clip.h * target_ratio)
-            clip = clip.crop(x_center=clip.w/2, width=new_w)
-        else:
-            new_h = int(clip.w / target_ratio)
-            clip = clip.crop(y_center=clip.h/2, height=new_h)
-        
-        clip = clip.resize(width=tw, height=th)
-
-        active_logo_pil = logo_h if tw >= th else logo_v
-        lw, lh = active_logo_pil.size
-        max_scale = min(tw / lw, th / lh)
-        final_scale = max_scale * (user_scale_percent / 100)
-        new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
-        
-        logo_res = active_logo_pil.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
-        logo_clip = (ImageClip(np.array(logo_res))
-                     .set_duration(clip.duration)
-                     .set_position(("center", "center")))
-
-        final_video = CompositeVideoClip([clip, logo_clip])
-        
-        temp_out = f"temp_{os.path.basename(video_path)}"
-        final_video.write_videofile(temp_out, codec="libx264", audio=True, logger=None, threads=4)
-        
-        with open(temp_out, "rb") as f:
-            data = f.read()
-        
-        clip.close()
-        final_video.close()
-        if os.path.exists(temp_out):
-            os.remove(temp_out)
-        return data
-    except: return None
+def process_videos_logic(video_files, logo_h, logo_v, tw, th, scale):
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        progress_bar = st.progress(0)
+        for i, f in enumerate(video_files):
+            st.write(f"Обработка: {os.path.basename(f)}...")
+            try:
+                clip = VideoFileClip(f)
+                target_ratio = tw / th
+                clip_ratio = clip.w / clip.h
+                if clip_ratio > target_ratio:
+                    new_w = int(clip.h * target_ratio)
+                    clip = clip.crop(x_center=clip.w/2, width=new_w)
+                else:
+                    new_h = int(clip.w / target_ratio)
+                    clip = clip.crop(y_center=clip.h/2, height=new_h)
+                clip = clip.resize(width=tw, height=th)
+                
+                active_logo_pil = logo_h if tw >= th else logo_v
+                lw, lh = active_logo_pil.size
+                max_scale = min(tw / lw, th / lh)
+                final_scale = max_scale * (scale / 100)
+                new_lw, new_lh = max(1, int(lw * final_scale)), max(1, int(lh * final_scale))
+                logo_res = active_logo_pil.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
+                
+                logo_clip = (ImageClip(np.array(logo_res))
+                             .set_duration(clip.duration)
+                             .set_position(("center", "center")))
+                
+                final_video = CompositeVideoClip([clip, logo_clip])
+                temp_out = f"temp_{os.path.basename(f)}"
+                final_video.write_videofile(temp_out, codec="libx264", audio=True, logger=None, threads=4)
+                
+                with open(temp_out, "rb") as vid_file:
+                    zf.writestr(os.path.basename(f), vid_file.read())
+                
+                clip.close()
+                final_video.close()
+                if os.path.exists(temp_out): os.remove(temp_out)
+            except Exception as e:
+                st.error(f"Ошибка в файле {f}: {e}")
+            progress_bar.progress((i + 1) / len(video_files))
+    return zip_buf.getvalue()
 
 # ====================== НАСТРОЙКА UI ======================
-st.set_page_config(page_title="LEDsi Генератор контента", layout="wide", page_icon="favicon.png")
+st.set_page_config(page_title="LEDsi Генератор", layout="wide", page_icon="favicon.png")
+
+if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
+if 'video_zip_ready' not in st.session_state: st.session_state.video_zip_ready = None
+if 'processing' not in st.session_state: st.session_state.processing = False
+if 'video_processing' not in st.session_state: st.session_state.video_processing = False
 
 logo_black_base64 = get_base64_img("logo_black.png")
 logo_h_base64 = get_base64_img("logo_h.png")
@@ -117,48 +115,20 @@ yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
 
 st.markdown(f"""
     <style>
-    div[data-testid="stNumberInput"] button {{ display: none !important; }}
-    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {{ -webkit-appearance: none !important; margin: 0 !important; }}
-    input[type=number] {{ -moz-appearance: textfield !important; }}
     .block-container {{ max-width: 750px !important; margin: 0 auto !important; padding-top: 1rem !important; }}
     [data-testid="stHeader"] {{ display: none; }}
-    [data-testid="column"] {{ min-width: 0px !important; flex: 1 1 0% !important; }}
-    div[data-testid="stNumberInput"], div[data-testid="stTextInput"], .stSlider {{ width: 100% !important; }}
-    .logo-container {{ display: flex; justify-content: center; margin-top: 10px; margin-bottom: 10px; }}
+    .logo-container {{ display: flex; justify-content: center; margin-bottom: 10px; }}
     .logo-img {{ width: 100px; }}
-    .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
-    .preview-placeholder {{
-        width: 100%; height: 250px; background-color: #f8f9fa; border: 2px dashed #dce0e4;
-        border-radius: 8px; display: flex; align-items: center; justify-content: center;
-        color: #adb5bd; font-weight: 500; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;
-    }}
-    .version-text {{ text-align: center; color: #bdc3c7; font-size: 0.8rem; margin-top: 15px; }}
-    @media (max-width: 768px) {{ .preview-img, .preview-placeholder {{ max-height: 200px !important; }} }}
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
-    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
-        content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 10px;
-        vertical-align: middle; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1);
-        border-top-color: #28a745; animation: spin 0.8s linear infinite;
-    }}
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
-    .stButton > button, .stDownloadButton > button {{ width: 420px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
+    .version-text {{ text-align: center; color: #bdc3c7; font-size: 0.8rem; margin-top: 15px; }}
+    div.stButton > button {{ width: 100% !important; height: 54px !important; font-weight: 600 !important; }}
     </style>
     <div class="logo-container">
-        <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
-        <img class="logo-img logo-dark" src="data:image/png;base64,{logo_h_base64}">
+        <img class="logo-img" src="data:image/png;base64,{logo_black_base64}">
     </div>
     <div class='main-title'>Генератор контента</div>
     """, unsafe_allow_html=True)
 
-if 'zip_ready' not in st.session_state: st.session_state.zip_ready = None
-if 'video_zip_ready' not in st.session_state: st.session_state.video_zip_ready = None
-if 'processing' not in st.session_state: st.session_state.processing = False
-if 'video_processing' not in st.session_state: st.session_state.video_processing = False
-
-preview_placeholder = st.empty()
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
@@ -170,80 +140,51 @@ with c2: h_mm = st.number_input("Высота", 0, value=0, on_change=reset_zip)
 with c3: pitch_str = st.text_input("Шаг", value="0", on_change=reset_zip)
 
 tw, th = 0, 0
-pitch_x, pitch_y = 0.0, 0.0
 try:
+    p_x = p_y = float(pitch_str.replace(",", ".")) if "/" not in pitch_str else 0
     if "/" in pitch_str:
-        parts = pitch_str.split("/")
-        pitch_x, pitch_y = float(parts[0].replace(",", ".")), float(parts[1].replace(",", "."))
-    else:
-        pitch_x = pitch_y = float(pitch_str.replace(",", "."))
+        p_x, p_y = [float(x.replace(",", ".")) for x in pitch_str.split("/")]
+    if w_mm > 0 and p_x > 0: tw, th = int(round(w_mm / p_x)), int(round(h_mm / p_y))
 except: pass
 
-if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
-    tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
-
 with c4:
-    orientation_key = "horiz" if tw >= th and tw > 0 else "vert"
-    logo_scale = st.slider("Размер логотипа %", 0, 100, 50, step=5, on_change=reset_zip, key=f"slider_{orientation_key}")
+    logo_scale = st.slider("Размер лого %", 0, 100, 50, step=5, on_change=reset_zip)
 
-if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
-    preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
-    if preview:
-        buf = io.BytesIO()
-        preview.save(buf, format="JPEG", quality=75)
-        img_str = base64.b64encode(buf.getvalue()).decode()
-        preview_placeholder.markdown(f'<div style="display: flex; justify-content: center; margin-bottom: 20px;"><img class="preview-img" src="data:image/jpeg;base64,{img_str}"></div>', unsafe_allow_html=True)
-else:
-    preview_placeholder.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div class="preview-placeholder">Тут будет превью</div></div>', unsafe_allow_html=True)
+# --- ИСПОЛНЕНИЕ ЛОГИКИ ---
+if tw > 0:
+    st.write(f"Разрешение: **{tw}x{th} px**")
+    
+    col_btns = st.columns(2)
+    
+    # Кнопка ФОТО
+    if col_btns[0].button("📸 Создать ФОТО", use_container_width=True):
+        st.session_state.processing = True
+        st.session_state.video_processing = False
 
-# ====================== БЛОК КНОПОК ======================
-st.markdown("<br>", unsafe_allow_html=True)
-photo_container = st.empty()
-video_container = st.empty()
-res_text = f"{tw}х{th} px" if tw > 0 else ""
+    # Кнопка ВИДЕО
+    if col_btns[1].button("🎥 Создать ВИДЕО", use_container_width=True):
+        st.session_state.video_processing = True
+        st.session_state.processing = False
 
-if tw > 0 and (logo_h_img or logo_v_img):
-    # ЛОГИКА ФОТО
-    if bg_files:
-        if st.session_state.zip_ready:
-            photo_container.download_button("Скачать архив (ФОТО)", st.session_state.zip_ready, f"photo_{tw}x{th}.zip", "application/zip", type="primary", key="dl_p")
-        elif st.session_state.processing:
-            zip_buf = io.BytesIO()
-            with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-                for i, f in enumerate(bg_files):
-                    photo_container.button(f"Обработка фото... {int(((i+1)/len(bg_files))*100)}%", disabled=True, key=f"pb_{i}")
-                    proc = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
-                    if proc:
-                        img_io = io.BytesIO()
-                        proc.save(img_io, format='JPEG', quality=95)
-                        zf.writestr(os.path.basename(f), img_io.getvalue())
-            st.session_state.zip_ready = zip_buf.getvalue()
+    # Процесс ФОТО
+    if st.session_state.processing:
+        with st.spinner("Генерация фото..."):
+            st.session_state.zip_ready = process_images_logic(bg_files, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
             st.session_state.processing = False
             st.rerun()
-        else:
-            if photo_container.button(f"Создать фото контент {res_text}", type="secondary", key="gen_p"):
-                st.session_state.processing, st.session_state.video_processing = True, False
-                st.rerun()
 
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-
-    # ЛОГИКА ВИДЕО
-    if video_files:
-        if st.session_state.video_zip_ready:
-            video_container.download_button("Скачать архив (ВИДЕО)", st.session_state.video_zip_ready, f"video_{tw}x{th}.zip", "application/zip", type="primary", key="dl_v")
-        elif st.session_state.video_processing:
-            v_zip_buf = io.BytesIO()
-            with zipfile.ZipFile(v_zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-                for i, f in enumerate(video_files):
-                    video_container.button(f"Обработка видео... {int(((i+1)/len(video_files))*100)}%", disabled=True, key=f"vb_{i}")
-                    v_data = process_single_video(f, logo_h_img, logo_v_img, tw, th, logo_scale)
-                    if v_data: zf.writestr(os.path.basename(f), v_data)
-            st.session_state.video_zip_ready = v_zip_buf.getvalue()
+    # Процесс ВИДЕО
+    if st.session_state.video_processing:
+        with st.spinner("Генерация видео (это займет время)..."):
+            st.session_state.video_zip_ready = process_videos_logic(video_files, logo_h_img, logo_v_img, tw, th, logo_scale)
             st.session_state.video_processing = False
             st.rerun()
-        else:
-            if video_container.button(f"Создать видео контент {res_text}", type="primary", key="gen_v"):
-                st.session_state.video_processing, st.session_state.processing = True, False
-                st.rerun()
 
-st.markdown(f'<div class="version-text">Версия 0.0.81. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
+    # Кнопки скачивания
+    if st.session_state.zip_ready:
+        st.download_button("💾 СКАЧАТЬ ФОТО (ZIP)", st.session_state.zip_ready, "photos.zip", "application/zip")
+    
+    if st.session_state.video_zip_ready:
+        st.download_button("💾 СКАЧАТЬ ВИДЕО (ZIP)", st.session_state.video_zip_ready, "videos.zip", "application/zip")
+
+st.markdown(f'<div class="version-text">Обновление: {yesterday_date}</div>', unsafe_allow_html=True)
