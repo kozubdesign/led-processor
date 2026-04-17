@@ -67,6 +67,7 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
 
 def process_video_file(v_path, logo_path, tw, th, scale_percent):
     try:
+        if not os.path.exists(logo_path): return None
         clip = VideoFileClip(v_path).without_audio()
         sc = max(tw / clip.w, th / clip.h)
         new_w, new_h = int(clip.w * sc), int(clip.h * sc)
@@ -75,6 +76,7 @@ def process_video_file(v_path, logo_path, tw, th, scale_percent):
         logo = (ImageClip(logo_path).with_duration(clip.duration).resized(width=tw * (scale_percent/100)).with_position(("center", "center")))
         final = CompositeVideoClip([clip_crop, logo])
         out_p = f"temp_{os.path.basename(v_path)}"
+        # Битрейт 5000k для качества
         final.write_videofile(out_p, fps=25, codec="libx264", bitrate="5000k", preset="ultrafast", logger=None)
         with open(out_p, "rb") as f: data = f.read()
         os.remove(out_p)
@@ -175,6 +177,8 @@ if tw > 0 and (logo_h_img or logo_v_img):
             for i, f in enumerate(files_to_proc):
                 percent = int(((i + 1) / len(files_to_proc)) * 100)
                 action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"p_{i}")
+                
+                data = None
                 if st.session_state.mode == "video":
                     data = process_video_file(f, "logo_h.png", tw, th, logo_scale)
                     new_filename = f"{tw}x{th}_{i+1}.mp4"
@@ -185,7 +189,9 @@ if tw > 0 and (logo_h_img or logo_v_img):
                         processed.save(img_io, format='JPEG', quality=95)
                         data = img_io.getvalue()
                     new_filename = f"{tw}x{th}_{i+1}.jpg"
+                
                 if data: zip_file.writestr(new_filename, data)
+                
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
@@ -201,4 +207,4 @@ if tw > 0 and (logo_h_img or logo_v_img):
                 st.session_state.processing = True
                 st.rerun()
 
-st.markdown(f'<div class="version-text">Версия 0.0.91. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="version-text">Версия 0.0.92. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
