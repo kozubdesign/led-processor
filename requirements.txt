@@ -1,4 +1,5 @@
 streamlit
 Pillow
-moviepy
-imageio-ffmpeg
+moviepy>=2.0.0
+imageio[ffmpeg]
+proglog
