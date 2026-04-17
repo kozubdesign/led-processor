@@ -5,7 +5,7 @@ import os
 import base64
 from PIL import Image, ImageOps
 from datetime import datetime, timedelta
-from moviepy import VideoFileClip, ImageClip, CompositeVideoClip # Добавлено для видео
+from moviepy import VideoFileClip, ImageClip, CompositeVideoClip
 
 # ====================== ФУНКЦИИ ======================
 @st.cache_resource
@@ -65,7 +65,6 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
             return img.resize((tw, th), Image.Resampling.LANCZOS)
     except: return None
 
-# Новая функция для видео
 def process_video_file(v_path, logo_path, tw, th, scale_percent):
     try:
         clip = VideoFileClip(v_path).without_audio()
@@ -160,6 +159,7 @@ if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
 else:
     preview_placeholder.markdown('<div style="display: flex; justify-content: center; margin-bottom: 20px;"><div class="preview-placeholder">Тут будет превью</div></div>', unsafe_allow_html=True)
 
+# ====================== БЛОК КНОПОК ======================
 st.markdown("<br>", unsafe_allow_html=True)
 action_placeholder = st.empty()
 
@@ -169,33 +169,36 @@ if tw > 0 and (logo_h_img or logo_v_img):
     if st.session_state.zip_ready:
         action_placeholder.download_button(label="Скачать архив", data=st.session_state.zip_ready, file_name=f"{tw}x{th}_{datetime.now().strftime('%y_%m_%d')}.zip", mime="application/zip", type="primary")
     elif st.session_state.processing:
-        zip_buffer = io.BytesIO()
         files_to_proc = vid_files if st.session_state.mode == "video" else bg_files
+        zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for i, f in enumerate(files_to_proc):
                 percent = int(((i + 1) / len(files_to_proc)) * 100)
                 action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"p_{i}")
                 if st.session_state.mode == "video":
                     data = process_video_file(f, "logo.png", tw, th, logo_scale)
+                    new_filename = f"{tw}x{th}_{i+1}.mp4"
                 else:
                     processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                     if processed:
                         img_io = io.BytesIO()
                         processed.save(img_io, format='JPEG', quality=95)
                         data = img_io.getvalue()
-                if data: zip_file.writestr(os.path.basename(f).replace(".mov", ".mp4"), data)
+                    new_filename = f"{tw}x{th}_{i+1}.jpg"
+                if data: zip_file.writestr(new_filename, data)
         st.session_state.zip_ready = zip_buffer.getvalue()
         st.session_state.processing = False
         st.rerun()
     else:
-        col_btn1, col_btn2 = st.columns(2)
-        if col_btn1.button(f"Создать фото контент {res_text}", type="primary"):
-            st.session_state.mode = "photo"
-            st.session_state.processing = True
-            st.rerun()
-        if col_btn2.button(f"Создать видео контент {res_text}", type="primary"):
-            st.session_state.mode = "video"
-            st.session_state.processing = True
-            st.rerun()
+        with action_placeholder.container():
+            col_btn1, col_btn2 = st.columns(2)
+            if col_btn1.button(f"Создать фото {res_text}", type="primary"):
+                st.session_state.mode = "photo"
+                st.session_state.processing = True
+                st.rerun()
+            if col_btn2.button(f"Создать видео {res_text}", type="primary"):
+                st.session_state.mode = "video"
+                st.session_state.processing = True
+                st.rerun()
 
-st.markdown(f'<div class="version-text">Версия 0.0.9. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="version-text">Версия 0.0.91. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
