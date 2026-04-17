@@ -176,7 +176,7 @@ if tw > 0 and (logo_h_img or logo_v_img):
                 percent = int(((i + 1) / len(files_to_proc)) * 100)
                 action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"p_{i}")
                 if st.session_state.mode == "video":
-                    data = process_video_file(f, "logo.png", tw, th, logo_scale)
+                    data = process_video_file(f, "logo_h.png", tw, th, logo_scale)
                     new_filename = f"{tw}x{th}_{i+1}.mp4"
                 else:
                     processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
