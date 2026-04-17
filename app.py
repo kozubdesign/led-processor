@@ -6,7 +6,7 @@ import base64
 from PIL import Image, ImageOps
 from datetime import datetime, timedelta
 
-# === Для видео ===
+# Для видео
 import moviepy.editor as mpy
 import numpy as np
 
@@ -38,9 +38,9 @@ def get_processed_preview(bg_path, _logo_h, _logo_v, tw, th, user_scale_percent,
         active_logo = _logo_h if tw >= th else _logo_v
         if not active_logo: return None
         with Image.open(bg_path) as img:
-            img.draft("RGB", (tw, th)) 
+            img.draft("RGB", (tw, th))
             temp_aspect = w_mm / h_mm
-            temp_h = 1000 
+            temp_h = 1000
             temp_w = int(temp_h * temp_aspect)
             img = ImageOps.fit(img.convert("RGB"), (temp_w, temp_h), Image.Resampling.BILINEAR)
             lw, lh = active_logo.size
@@ -70,7 +70,7 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
             return img.resize((tw, th), Image.Resampling.LANCZOS)
     except: return None
 
-# ====================== ФУНКЦИЯ ДЛЯ ВИДЕО (исправленная) ======================
+# ====================== ФУНКЦИЯ ДЛЯ ВИДЕО ======================
 def process_video(video_path, logo_h, logo_v, tw, th, logo_scale):
     try:
         video = mpy.VideoFileClip(video_path)
@@ -86,7 +86,7 @@ def process_video(video_path, logo_h, logo_v, tw, th, logo_scale):
         new_lh = max(1, int(lh * final_scale))
 
         logo_resized = active_logo.resize((new_lw, new_lh), Image.Resampling.LANCZOS)
-        logo_array = np.array(logo_resized)                    # ← главное исправление
+        logo_array = np.array(logo_resized)
 
         logo_clip = mpy.ImageClip(logo_array)
         logo_clip = logo_clip.set_duration(video.duration)
@@ -145,17 +145,6 @@ st.markdown(f"""
     }}
     .version-text {{ text-align: center; color: #bdc3c7; font-size: 0.8rem; margin-top: 15px; }}
     @media (max-width: 768px) {{ .preview-img, .preview-placeholder {{ max-height: 200px !important; }} }}
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
-    button[disabled] div[data-testid="stMarkdownContainer"] p::before {{
-        content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 10px;
-        vertical-align: middle; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1);
-        border-top-color: #28a745; animation: spin 0.8s linear infinite;
-    }}
-    @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
-    @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
-    .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
-    .stButton > button, .stDownloadButton > button {{ width: 420px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
     </style>
     <div class="logo-container">
         <img class="logo-img logo-light" src="data:image/png;base64,{logo_black_base64}">
@@ -175,6 +164,7 @@ logo_v_img = get_cached_logo("logo_v.png")
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
 video_files = [os.path.join("video", f) for f in os.listdir("video") if f.lower().endswith(('.mp4', '.mov', '.avi'))] if os.path.exists("video") else []
 
+# ====================== Параметры ======================
 c1, c2, c3, c4 = st.columns([1, 1, 1, 1.8])
 with c1: w_mm = st.number_input("Ширина", 0, value=0, on_change=reset_zip)
 with c2: h_mm = st.number_input("Высота", 0, value=0, on_change=reset_zip)
@@ -186,31 +176,20 @@ is_asymmetric = "/" in pitch_str
 try:
     if is_asymmetric:
         parts = pitch_str.split("/")
-        pitch_x, pitch_y = float(parts[0].replace(",", ".")), float(parts[1].replace(",", "."))
+        pitch_x = float(parts[0].replace(",", "."))
+        pitch_y = float(parts[1].replace(",", "."))
     else:
         pitch_x = pitch_y = float(pitch_str.replace(",", "."))
 except: pass
 
 if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
-    tw, th = int(round(w_mm / pitch_x)), int(round(h_mm / pitch_y))
+    tw = int(round(w_mm / pitch_x))
+    th = int(round(h_mm / pitch_y))
 
 with c4:
-    if tw >= th and tw > 0:
-        current_default = 50 
-        orientation_key = "horiz"
-    else:
-        current_default = 50
-        orientation_key = "vert"
-   
-    logo_scale = st.slider(
-        "Размер логотипа %",
-        0, 100,
-        current_default,
-        step=5,
-        on_change=reset_zip,
-        key=f"slider_{orientation_key}"
-    )
+    logo_scale = st.slider("Размер логотипа %", 0, 100, 50, step=5, on_change=reset_zip)
 
+# Превью
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -229,73 +208,56 @@ else:
         </div>
     ''', unsafe_allow_html=True)
 
-# ====================== БЛОК КНОПОК ======================
+# ====================== КНОПКИ ======================
 st.markdown("<br>", unsafe_allow_html=True)
 
 if tw > 0 and (logo_h_img or logo_v_img):
     col1, col2 = st.columns(2)
 
-    with col1:
+    with col1:   # Кнопка для изображений (как было)
         if bg_files:
             res_text = f"{tw}х{th} px"
-            action_placeholder = st.empty()
-            
             if st.session_state.zip_ready:
                 current_date = datetime.now().strftime("%y_%m_%d")
-                zip_filename = f"{tw}x{th}_{current_date}.zip"
-                action_placeholder.download_button(
-                    label="Скачать архив", 
-                    data=st.session_state.zip_ready, 
-                    file_name=zip_filename, 
-                    mime="application/zip", 
-                    type="primary"
-                )
+                st.download_button("Скачать архив", data=st.session_state.zip_ready, 
+                                 file_name=f"{tw}x{th}_{current_date}.zip", mime="application/zip", type="primary")
             elif st.session_state.processing:
+                # ... ваш оригинальный блок обработки изображений ...
                 zip_buffer = io.BytesIO()
-                total_files = len(bg_files)
-                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                     for i, f in enumerate(bg_files):
-                        percent = int(((i + 1) / total_files) * 100)
-                        action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"btn_proc_{i}")
+                        st.button(f"Идет генерация... {int((i+1)/len(bg_files)*100)}%", disabled=True)
                         processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
                         if processed:
-                            img_byte_arr = io.BytesIO()
-                            processed.save(img_byte_arr, format='JPEG', quality=95)
-                            zip_file.writestr(os.path.basename(f), img_byte_arr.getvalue())
+                            buf = io.BytesIO()
+                            processed.save(buf, format='JPEG', quality=95)
+                            zf.writestr(os.path.basename(f), buf.getvalue())
                 st.session_state.zip_ready = zip_buffer.getvalue()
                 st.session_state.processing = False
                 st.rerun()
             else:
-                if action_placeholder.button(f"Создать контент {res_text}", type="primary"):
+                if st.button(f"Создать контент {res_text}", type="primary"):
                     st.session_state.processing = True
                     st.rerun()
 
-    with col2:
+    with col2:   # ← Кнопка для видео слева от основной
         if video_files:
-            video_action_placeholder = st.empty()
             if st.session_state.zip_ready_video:
                 current_date = datetime.now().strftime("%y_%m_%d")
-                zip_filename = f"video_{tw}x{th}_{current_date}.zip"
-                video_action_placeholder.download_button(
-                    label="Скачать видео", 
-                    data=st.session_state.zip_ready_video, 
-                    file_name=zip_filename, 
-                    mime="application/zip", 
-                    type="secondary"
-                )
+                st.download_button("Скачать видео", data=st.session_state.zip_ready_video,
+                                 file_name=f"video_{tw}x{th}_{current_date}.zip", mime="application/zip", type="secondary")
             else:
-                if video_action_placeholder.button("Создать видео-контент", type="secondary"):
+                if st.button("Создать видео-контент", type="secondary"):
                     with st.spinner("Обрабатываем видео..."):
                         zip_buffer = io.BytesIO()
-                        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                             for vpath in video_files:
-                                video_data = process_video(vpath, logo_h_img, logo_v_img, tw, th, logo_scale)
-                                if video_data:
+                                data = process_video(vpath, logo_h_img, logo_v_img, tw, th, logo_scale)
+                                if data:
                                     name = os.path.splitext(os.path.basename(vpath))[0]
-                                    zip_file.writestr(f"{name}_{tw}x{th}.mp4", video_data)
+                                    zf.writestr(f"{name}_{tw}x{th}.mp4", data)
                         st.session_state.zip_ready_video = zip_buffer.getvalue()
-                        st.success("Видео успешно обработаны!")
+                        st.success("Видео готовы!")
                         st.rerun()
 
-# Подпись
-st.markdown(f'<div class="version-text">Версия 0.0.83. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="version-text">Версия 0.0.83. Обновление от {yesterday_date}</div>', unsafe_allow_html=True)
