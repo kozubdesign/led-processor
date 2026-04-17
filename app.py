@@ -67,21 +67,41 @@ def process_single_image(bg_path, logo_h, logo_v, tw, th, user_scale_percent, w_
 
 def process_video_file(v_path, logo_path, tw, th, scale_percent):
     try:
-        if not os.path.exists(logo_path): return None
+        if not os.path.exists(logo_path):
+            print(f"Ошибка: Логотип {logo_path} не найден")
+            return None
+            
         clip = VideoFileClip(v_path).without_audio()
+        
+        # Расчет размеров
         sc = max(tw / clip.w, th / clip.h)
         new_w, new_h = int(clip.w * sc), int(clip.h * sc)
+        
         clip_res = clip.resized((new_w, new_h))
         clip_crop = clip_res.cropped(x_center=new_w/2, y_center=new_h/2, width=tw, height=th)
-        logo = (ImageClip(logo_path).with_duration(clip.duration).resized(width=tw * (scale_percent/100)).with_position(("center", "center")))
+        
+        # Наложение лого
+        logo = (ImageClip(logo_path)
+                .with_duration(clip.duration)
+                .resized(width=tw * (scale_percent/100))
+                .with_position(("center", "center")))
+        
         final = CompositeVideoClip([clip_crop, logo])
+        
         out_p = f"temp_{os.path.basename(v_path)}"
-        # Битрейт 5000k для качества
-        final.write_videofile(out_p, fps=25, codec="libx264", bitrate="5000k", preset="ultrafast", logger=None)
-        with open(out_p, "rb") as f: data = f.read()
+        # Используем preset ultrafast для скорости и уменьшения нагрузки на сервер
+        final.write_videofile(out_p, fps=25, codec="libx264", bitrate="3000k", preset="ultrafast", logger=None)
+        
+        with open(out_p, "rb") as f:
+            data = f.read()
+        
         os.remove(out_p)
+        clip.close()
+        final.close()
         return data
-    except: return None
+    except Exception as e:
+        print(f"Критическая ошибка MoviePy на файле {v_path}: {e}")
+        return None
 
 # ====================== НАСТРОЙКА UI ======================
 st.set_page_config(page_title="LEDsi Генератор контента", layout="wide", page_icon="favicon.png")
@@ -104,13 +124,12 @@ st.markdown(f"""
     .preview-img {{ max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #ddd; }}
     .preview-placeholder {{ width: 100%; height: 250px; background-color: #f8f9fa; border: 2px dashed #dce0e4; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #adb5bd; font-weight: 500; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }}
     .version-text {{ text-align: center; color: #bdc3c7; font-size: 0.8rem; margin-top: 15px; }}
-    @media (max-width: 768px) {{ .preview-img, .preview-placeholder {{ max-height: 200px !important; }} }}
     @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     button[disabled] div[data-testid="stMarkdownContainer"] p::before {{ content: ""; display: inline-block; width: 18px; height: 18px; margin-right: 10px; vertical-align: middle; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); border-top-color: #28a745; animation: spin 0.8s linear infinite; }}
     @media (prefers-color-scheme: light) {{ .logo-dark {{ display: none; }} .logo-light {{ display: block; }} }}
     @media (prefers-color-scheme: dark) {{ .logo-light {{ display: none; }} .logo-dark {{ display: block; }} }}
     .main-title {{ text-align: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 20px; }}
-    div.stButton, div.stDownloadButton, div.element-container:has(button) {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
+    div.stButton, div.stDownloadButton {{ display: flex !important; justify-content: center !important; width: 100% !important; }}
     .stButton > button, .stDownloadButton > button {{ width: 420px !important; height: 54px !important; font-weight: 600 !important; border-radius: 8px !important; }}
     </style>
     <div class="logo-container">
@@ -127,8 +146,10 @@ if 'mode' not in st.session_state: st.session_state.mode = "photo"
 preview_placeholder = st.empty()
 logo_h_img = get_cached_logo("logo_h.png")
 logo_v_img = get_cached_logo("logo_v.png")
+
+# Список файлов
 bg_files = [os.path.join("images", f) for f in os.listdir("images") if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists("images") else []
-vid_files = [os.path.join("videos", f) for f in os.listdir("videos") if f.lower().endswith(('.mp4', '.mov'))] if os.path.exists("videos") else []
+vid_files = [os.path.join("videos", f) for f in os.listdir("videos") if f.lower().endswith(('.mp4', '.mov', '.avi'))] if os.path.exists("videos") else []
 
 c1, c2, c3, c4 = st.columns([1, 1, 1, 1.8])
 with c1: w_mm = st.number_input("Ширина", 0, value=0, on_change=reset_zip)
@@ -151,6 +172,7 @@ if w_mm > 0 and h_mm > 0 and pitch_x > 0 and pitch_y > 0:
 with c4:
     logo_scale = st.slider("Размер логотипа %", 0, 100, 50, step=5, on_change=reset_zip)
 
+# Превью (всегда по первому фото)
 if tw > 0 and (logo_h_img or logo_v_img) and bg_files:
     preview = get_processed_preview(bg_files[0], logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
     if preview:
@@ -172,15 +194,25 @@ if tw > 0 and (logo_h_img or logo_v_img):
         action_placeholder.download_button(label="Скачать архив", data=st.session_state.zip_ready, file_name=f"{tw}x{th}_{datetime.now().strftime('%y_%m_%d')}.zip", mime="application/zip", type="primary")
     elif st.session_state.processing:
         files_to_proc = vid_files if st.session_state.mode == "video" else bg_files
+        
+        if not files_to_proc:
+            st.error(f"Папка {st.session_state.mode} пуста!")
+            st.session_state.processing = False
+            st.rerun()
+
         zip_buffer = io.BytesIO()
+        files_added = 0
+        
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for i, f in enumerate(files_to_proc):
                 percent = int(((i + 1) / len(files_to_proc)) * 100)
-                action_placeholder.button(f"Идет генерация... {percent}%", disabled=True, key=f"p_{i}")
+                action_placeholder.button(f"Генерация {st.session_state.mode}... {percent}%", disabled=True, key=f"p_{i}")
                 
                 data = None
                 if st.session_state.mode == "video":
-                    data = process_video_file(f, "logo_h.png", tw, th, logo_scale)
+                    # Пробуем logo_h.png, если его нет - logo_black.png
+                    logo_path = "logo_h.png" if os.path.exists("logo_h.png") else "logo_black.png"
+                    data = process_video_file(f, logo_path, tw, th, logo_scale)
                     new_filename = f"{tw}x{th}_{i+1}.mp4"
                 else:
                     processed = process_single_image(f, logo_h_img, logo_v_img, tw, th, logo_scale, w_mm, h_mm)
@@ -190,21 +222,27 @@ if tw > 0 and (logo_h_img or logo_v_img):
                         data = img_io.getvalue()
                     new_filename = f"{tw}x{th}_{i+1}.jpg"
                 
-                if data: zip_file.writestr(new_filename, data)
-                
-        st.session_state.zip_ready = zip_buffer.getvalue()
+                if data:
+                    zip_file.writestr(new_filename, data)
+                    files_added += 1
+        
+        if files_added > 0:
+            st.session_state.zip_ready = zip_buffer.getvalue()
+        else:
+            st.error("Не удалось создать ни одного файла. Проверьте логи.")
+            
         st.session_state.processing = False
         st.rerun()
     else:
         with action_placeholder.container():
-            col_btn1, col_btn2 = st.columns(2)
-            if col_btn1.button(f"Создать фото {res_text}", type="primary"):
+            c_btn1, c_btn2 = st.columns(2)
+            if c_btn1.button(f"Создать фото {res_text}", type="primary"):
                 st.session_state.mode = "photo"
                 st.session_state.processing = True
                 st.rerun()
-            if col_btn2.button(f"Создать видео {res_text}", type="primary"):
+            if c_btn2.button(f"Создать видео {res_text}", type="primary"):
                 st.session_state.mode = "video"
                 st.session_state.processing = True
                 st.rerun()
 
-st.markdown(f'<div class="version-text">Версия 0.0.92. Обновление контента от {yesterday_date}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="version-text">Версия 0.0.93. Видео-фикс от {yesterday_date}</div>', unsafe_allow_html=True)
